@@ -467,7 +467,7 @@
                             (qty === 0 ? `<button onclick="add(${p.id},1)" class="w-full bg-orange-600 py-5 rounded-2xl font-black text-[10px] text-white">Agregar</button>` :
                             `<div class="flex items-center bg-orange-600 rounded-2xl p-1 shadow-2xl">
                                 <button onclick="add(${p.id},-1)" class="w-12 h-12 text-white text-2xl font-black">－</button>
-                                <input type="number" value="${qty}" class="qty-input flex-1" 
+                                 <input type="number" value="${qty}" step="0.5" min="0" class="qty-input flex-1"
                                        onchange="setQty(${p.id}, this.value)" 
                                        onclick="this.select()">
                                 <button onclick="add(${p.id},1)" class="w-12 h-12 text-white text-2xl font-black">＋</button>
@@ -479,7 +479,8 @@
 
         window.setQty = (id, val) => {
             const p = data[id];
-            let n = parseInt(val) || 0;
+           let n = parseFloat(val) || 0;
+           n = Math.round(n * 2) / 2;
             if (n > p.stock) {
                 n = p.stock;
                 Swal.fire('Stock Máximo', `Solo hay ${p.stock} unidades.`, 'warning');

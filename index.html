@@ -1,4 +1,4 @@
-
+<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -621,38 +621,39 @@
     const a = document.getElementById('user-address').value;
     const entrega = document.getElementById('btn-whatsapp').dataset.entrega || "HOY";
 
-    // 1. Verificación de datos
+    // 1. Validación inicial
     if (!n || !a) return Swal.fire('Faltan Datos', 'Por favor completá nombre y dirección.', 'warning');
-
-    // 2. Cartel de espera (Mejora la experiencia del cliente)
+    
+    // Mostramos un mensaje de "Procesando" para que el cliente espere un segundo
     Swal.fire({
         title: 'Procesando pedido...',
-        text: 'Estamos reservando tu stock en El Uru',
+        text: 'Estamos reservando tu stock',
         allowOutsideClick: false,
         didOpen: () => { Swal.showLoading(); }
     });
 
-    // 3. CONEXIÓN CON GOOGLE SHEETS
-    const URL_CEREBRO = "https://script.google.com/macros/s/AKfycbw2eUc0VSIAogx2kN4B6UblcgZyA_6xIrD1sUk5wsPL2J9KY7hOwgUM7p6EeZkY1cJd/exec";
+    // 2. CONEXIÓN CON GOOGLE SHEETS (Descuento de Stock)
+    const URL_CEREBRO = "https://script.google.com/macros/s/AKfycbx3JyHXqLjw7EBf1oPJcwwNgjcEOnNacg0XOv3ywfahqYlyt635C2dDXUP7q5V2cUz4/exec
+url web"; // ⚠️ PEGA ACÁ TU URL DEL PASO 2
 
     try {
-        // Esta es la parte que "habla" con tu Excel
         await fetch(URL_CEREBRO, {
             method: 'POST',
-            mode: 'no-cors',
-            headers: { 'Content-Type': 'application/json' },
+            mode: 'no-cors', // Evita problemas de permisos entre dominios
+            cache: 'no-cache',
             body: JSON.stringify(cart)
         });
-        console.log("Stock descontado exitosamente");
+        console.log("Inventario actualizado en el Sheets");
     } catch (e) {
         console.error("Error al descontar stock:", e);
+        // No bloqueamos el pedido si falla internet, pero lo registramos
     }
 
-    // 4. Cierre de proceso visual
+    // 3. Lógica visual y cierre de carga
     Swal.close();
     confetti({ particleCount: 200, spread: 80, origin: { y: 0.6 } });
 
-    // 5. Armado del mensaje para WhatsApp
+    // 4. Armado del mensaje para WhatsApp
     let m = "*NUEVO PEDIDO - EL URU*%0A";
     m += "👤 *Comercio:* " + n + "%0A";
     m += "📍 *Dirección:* " + a + "%0A";
@@ -669,7 +670,7 @@
     m += "------------------------------%0A";
     m += "💰 *TOTAL: $" + document.getElementById('total').innerText + "*";
     
-    // 6. Abrir WhatsApp
+    // 5. Abrir WhatsApp
     window.open("https://wa.me/5492920248292?text=" + m);
 }
             

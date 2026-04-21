@@ -635,15 +635,16 @@
             mode: 'no-cors',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-    comercio: n,
-    direccion: a,
-    entrega: entrega,
-    total: document.getElementById('total').innerText,
-    items: itemsParaDescontar.map(item => ({
-        ...item,
-        nombre: data[item.rowIndex - 2]?.nom || ''
-    }))
-})
+                comercio: n,
+                direccion: a,
+                entrega: entrega,
+                total: document.getElementById('total').innerText,
+                items: itemsParaDescontar.map(item => ({
+                    ...item,
+                    nombre: data[item.rowIndex - 2]?.nom || ''
+                }))
+            })
+        });
     } catch(err) {
         console.warn('Error al descontar stock:', err);
     }

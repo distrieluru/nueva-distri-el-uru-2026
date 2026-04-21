@@ -617,33 +617,61 @@
 
         function verFavoritos() { soloFavs = !soloFavs; document.getElementById('btn-favs').classList.toggle('text-red-500', soloFavs); render(); }
 
-        function enviarPedido() {
-            const n = document.getElementById('user-name').value;
-            const a = document.getElementById('user-address').value;
-            const entrega = document.getElementById('btn-whatsapp').dataset.entrega || "HOY";
+        async function enviarPedido() {
+    const n = document.getElementById('user-name').value;
+    const a = document.getElementById('user-address').value;
+    const entrega = document.getElementById('btn-whatsapp').dataset.entrega || "HOY";
 
-            if (!n || !a) return Swal.fire('Faltan Datos', 'Por favor completá nombre y dirección.', 'warning');
-            
-            confetti({ particleCount: 200, spread: 80, origin: { y: 0.6 } });
+    if (!n || !a) return Swal.fire('Faltan Datos', 'Por favor completá nombre y dirección.', 'warning');
 
-            let m = "*NUEVO PEDIDO - EL URU*%0A";
-            m += "👤 *Comercio:* " + n + "%0A";
-            m += "📍 *Dirección:* " + a + "%0A";
-            m += "🕒 *Entrega:* " + entrega + "%0A%0A";
-            m += "------------------------------%0A";
-            
-            Object.entries(cart).forEach(([id, q]) => {
-                const p = data[id];
-                let pre = p.pre;
-                if (p.pack_cantidad > 0 && q >= p.pack_cantidad) pre = p.pack_precio;
-                m += "🔸 *" + q + "* x " + p.nom + " ($" + pre.toLocaleString() + " c/u)%0A";
-            });
-            
-            m += "------------------------------%0A";
-            m += "💰 *TOTAL: $" + document.getElementById('total').innerText + "*";
-            
-            window.open("https://wa.me/5492920248292?text=" + m);
-        }
+    const itemsParaDescontar = Object.entries(cart).map(([id, qty]) => ({
+        rowIndex: parseInt(id) + 2,
+        cantidad: qty
+    }));
+
+    try {
+        await fetch(APPS_SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ items: itemsParaDescontar })
+        });
+    } catch(err) {
+        console.warn('Error al descontar stock:', err);
+    }
+
+    // Actualizar stock local inmediatamente
+    itemsParaDescontar.forEach(item => {
+        const id = item.rowIndex - 2;
+        if (data[id]) data[id].stock = Math.max(0, data[id].stock - item.cantidad);
+    });
+
+    confetti({ particleCount: 200, spread: 80, origin: { y: 0.6 } });
+
+    let m = "*NUEVO PEDIDO - EL URU*%0A";
+    m += "👤 *Comercio:* " + n + "%0A";
+    m += "📍 *Dirección:* " + a + "%0A";
+    m += "🕒 *Entrega:* " + entrega + "%0A%0A";
+    m += "------------------------------%0A";
+    
+    Object.entries(cart).forEach(([id, q]) => {
+        const p = data[id];
+        let pre = p.pre;
+        if (p.pack_cantidad > 0 && q >= p.pack_cantidad) pre = p.pack_precio;
+        m += "🔸 *" + q + "* x " + p.nom + " ($" + pre.toLocaleString() + " c/u)%0A";
+    });
+    
+    m += "------------------------------%0A";
+    m += "💰 *TOTAL: $" + document.getElementById('total').innerText + "*";
+
+    cart = {};
+    update();
+    render();
+    document.getElementById('cart').style.display = 'none';
+    setTimeout(() => load(), 3000);
+    
+    window.open("https://wa.me/5492920248292?text=" + m);
+}
 
         /* FUNCIONES DE LOGÍSTICA INTEGRADAS */
         function abrirLogistica() {

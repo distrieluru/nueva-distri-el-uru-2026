@@ -629,7 +629,7 @@
         cantidad: qty
     }));
 
-    try {
+   try {
     const params = new URLSearchParams({
         comercio: n,
         direccion: a,
@@ -640,7 +640,7 @@
             nombre: data[item.rowIndex - 2]?.nom || ''
         })))
     });
-    await fetch(APPS_SCRIPT_URL + '?' + params.toString(), { mode: 'no-cors' });
+    new Image().src = APPS_SCRIPT_URL + '?' + params.toString();
 } catch(err) {
     console.warn('Error al descontar stock:', err);
 }

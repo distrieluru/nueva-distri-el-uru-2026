@@ -1043,7 +1043,7 @@
                 renderCats();
                 render();
                 verificarHorarioCierre();
-               if (!window._promoYaMostrada) { mostrarPopupSiCorresponde(); window._promoYaMostrada = true; }
+                if (!window._promoMostrada) { mostrarPopupSiCorresponde(); window._promoMostrada = true; }
 
             } catch (e) {
                 console.error('[URU ERROR]', e);
@@ -1177,69 +1177,163 @@
             }
         }
 
-        // ── PEDIDO NATURAL: lanzar ────────────────────────────────────────────
+        // ── PEDIDO NATURAL: parser local amplio ──────────────────────────────
         let pedidoNaturalItems = [];
 
-        async function lanzarPedidoNatural() {
+        function normStr(s) {
+            return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
+        }
+
+        // Palabras coloquiales → cantidad numérica
+        function resolverCantidad(tok) {
+            const MAP = {
+                'un':1,'una':1,'uno':1,'dos':2,'tres':3,'cuatro':4,'cinco':5,
+                'seis':6,'siete':7,'ocho':8,'nueve':9,'diez':10,'once':11,'doce':12,
+                'cajon':12,'cajón':12,'cajones':12,'cajon de':12,
+                'caja':12,'cajas':12,'caja de':12,
+                'plancha':12,'planchas':12,'plancha de':12,
+                'pack':6,'packs':6,'six pack':6,
+                'docena':12,'docenas':12,'media docena':6,
+                'fardo':10,'fardos':10,'bulto':1,'bultos':1,
+                'unidad':1,'unidades':1,'par':2,
+            };
+            const t = normStr(tok);
+            if (MAP[t] !== undefined) return MAP[t];
+            const n = parseInt(t);
+            return isNaN(n) ? null : n;
+        }
+
+        // Puntúa coincidencia entre nombre de producto y términos buscados
+        function puntuar(nomProd, terminos) {
+            const nom = normStr(nomProd);
+            let pts = 0;
+            for (const t of terminos) {
+                if (t.length < 3) continue;
+                if (nom.includes(t)) pts += t.length * 2;
+                else {
+                    // coincidencia parcial: al menos 3 chars seguidos
+                    for (let i = 0; i <= t.length - 3; i++) {
+                        if (nom.includes(t.slice(i, i+3))) { pts += 1; break; }
+                    }
+                }
+            }
+            return pts;
+        }
+
+        // Parsea texto libre en segmentos cantidad+producto
+        function parsearTextoLibre(texto) {
+            // separadores naturales
+            const segs = texto
+                .split(/[,;]|\s+y\s+|\s+mas\s+|\s+más\s+|\s+tambien\s+|\s+también\s+/i)
+                .map(s => s.trim()).filter(s => s.length > 1);
+
+            const items = [];
+
+            // palabras que indican cantidad coloquial (para detectarlas antes del producto)
+            const CANT_WORDS = [
+                'cajon','cajón','cajones','caja','cajas','plancha','planchas',
+                'pack','packs','docena','docenas','fardo','fardos','bulto','bultos',
+                'unidad','unidades','par','six','media',
+                'un','una','uno','dos','tres','cuatro','cinco','seis','siete',
+                'ocho','nueve','diez','once','doce',
+            ];
+
+            for (const seg of segs) {
+                const tokens = seg.split(/\s+/);
+                let cantidad = 1;
+                let cantFound = false;
+                let busquedaTokens = [];
+
+                for (let i = 0; i < tokens.length; i++) {
+                    const t = normStr(tokens[i]);
+
+                    // número directo
+                    if (!cantFound && /^\d+$/.test(t)) {
+                        cantidad = parseInt(t);
+                        cantFound = true;
+                        continue;
+                    }
+
+                    // intenta combinar 2 tokens (ej: "media docena", "cajon de")
+                    if (!cantFound && i < tokens.length - 1) {
+                        const combo = normStr(tokens[i] + ' ' + tokens[i+1]);
+                        const val2 = resolverCantidad(combo);
+                        if (val2 !== null) { cantidad = val2; cantFound = true; i++; continue; }
+                    }
+
+                    // token individual como cantidad
+                    if (!cantFound && CANT_WORDS.includes(t)) {
+                        const val1 = resolverCantidad(t);
+                        if (val1 !== null) { cantidad = val1; cantFound = true; continue; }
+                    }
+
+                    // filtrar palabras vacías
+                    if (!['de','del','la','el','los','las','un','una','con','sin','x'].includes(t)) {
+                        busquedaTokens.push(t);
+                    }
+                }
+
+                if (busquedaTokens.length === 0) continue;
+
+                // buscar en catálogo con puntuación
+                const terminos = busquedaTokens.filter(t => t.length >= 2);
+                const candidatos = data
+                    .map(p => ({ p, pts: puntuar(p.nom, terminos) }))
+                    .filter(x => x.pts > 0)
+                    .sort((a,b) => b.pts - a.pts);
+
+                // agrupar los que tengan puntuación similar (posibles variantes)
+                let matches = [];
+                if (candidatos.length > 0) {
+                    const topPts = candidatos[0].pts;
+                    // incluir todos los que tengan al menos 60% del puntaje top
+                    matches = candidatos
+                        .filter(x => x.pts >= topPts * 0.6)
+                        .map(x => x.p)
+                        .slice(0, 8);
+                }
+
+                let estado;
+                if (matches.length === 0)       estado = 'vacio';
+                else if (matches.length === 1)  estado = matches[0].stock <= 0 ? 'vacio' : 'ok';
+                else                             estado = 'multi';
+
+                items.push({
+                    raw:          { busqueda: busquedaTokens.join(' '), cantidad, condicional: false },
+                    matches,
+                    cantidad,
+                    condicional:  false,
+                    estado,
+                    seleccionado: estado === 'ok' ? matches[0].id : null
+                });
+            }
+
+            return items;
+        }
+
+        function lanzarPedidoNatural() {
             const q = document.getElementById('search').value.trim();
             if (!q || q.length < 3) return;
 
             const btn = document.getElementById('btn-pedido-natural');
             btn.textContent = '⏳ Analizando...';
             btn.style.pointerEvents = 'none';
-            document.getElementById('search-wrapper').classList.add('ai-thinking');
 
-            try {
-                const url  = `${APPS_SCRIPT_URL}?action=pedido_natural&q=${encodeURIComponent(q)}&token=${encodeURIComponent(SECRET_TOKEN)}`;
-                const res  = await fetch(url);
-                const json = await res.json();
+            // pequeño delay para dar feedback visual
+            setTimeout(() => {
+                pedidoNaturalItems = parsearTextoLibre(q);
 
-                if (!json.ok || !json.items || json.items.length === 0) {
-                    Toast.fire({ icon: 'warning', title: 'No pude interpretar el pedido' });
+                btn.textContent = '✦ Pedido IA';
+                btn.style.pointerEvents = '';
+
+                if (pedidoNaturalItems.length === 0) {
+                    Toast.fire({ icon: 'warning', title: 'No encontré productos en ese texto' });
                     return;
                 }
 
-                // Resolver cada item contra el catálogo local
-                pedidoNaturalItems = json.items.map(item => {
-                    const busq    = item.busqueda.toLowerCase();
-                    const palabras = busq.split(' ').filter(p => p.length > 2);
-                    const matches  = data.filter(p => {
-                        const nom = p.nom.toLowerCase();
-                        return nom.includes(busq) || palabras.some(pal => nom.includes(pal));
-                    });
-
-                    let estado;
-                    if (matches.length === 0) {
-                        estado = 'vacio';
-                    } else if (matches.length === 1) {
-                        if (matches[0].stock <= 0 && item.condicional) estado = 'cond_skip';
-                        else if (matches[0].stock <= 0) estado = 'vacio';
-                        else estado = 'ok';
-                    } else {
-                        estado = 'multi';
-                    }
-
-                    return {
-                        raw:          item,
-                        matches:      matches,
-                        cantidad:     item.cantidad || 1,
-                        condicional:  item.condicional || false,
-                        estado:       estado,
-                        seleccionado: estado === 'ok' ? matches[0].id : null
-                    };
-                });
-
                 renderPedidoNatural();
                 document.getElementById('pedido-natural-overlay').classList.add('visible');
-
-            } catch(err) {
-                console.error('[PedidoNatural]', err);
-                Toast.fire({ icon: 'error', title: 'Error al conectar con IA' });
-            } finally {
-                btn.textContent = '✦ Pedido IA';
-                btn.style.pointerEvents = '';
-                document.getElementById('search-wrapper').classList.remove('ai-thinking');
-            }
+            }, 300);
         }
 
         function renderPedidoNatural() {
@@ -1255,7 +1349,7 @@
 
                 const selectorVariantes = item.estado === 'multi' ? `
                     <div class="mt-2 space-y-1">
-                        ${item.matches.slice(0,6).map(p => `
+                        ${item.matches.slice(0,8).map(p => `
                             <label class="flex items-center gap-2 cursor-pointer p-2 rounded-xl hover:bg-orange-500/10 transition">
                                 <input type="radio" name="pn-var-${idx}" value="${p.id}"
                                        ${p.stock <= 0 ? 'disabled' : ''}
@@ -1278,7 +1372,6 @@
                         <div class="flex-1 min-w-0">
                             <div class="flex items-center gap-2 flex-wrap">
                                 <span class="text-[var(--text-main)] font-black text-sm uppercase">${item.raw.busqueda}</span>
-                                ${item.condicional ? '<span class="text-[8px] bg-gray-500/20 text-gray-400 px-2 py-0.5 rounded-lg font-black uppercase">Si hay</span>' : ''}
                             </div>
                             <div class="text-[10px] text-[var(--text-muted)] mt-0.5">${labels[item.estado] || ''}</div>
                             ${selectorVariantes}
@@ -1305,7 +1398,7 @@
         }
 
         function confirmarPedidoNatural() {
-            const errores  = [];
+            const errores   = [];
             const agregados = [];
 
             pedidoNaturalItems.forEach(item => {

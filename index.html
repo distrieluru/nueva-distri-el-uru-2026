@@ -1222,14 +1222,12 @@
 
         // Parsea texto libre en segmentos cantidad+producto
         function parsearTextoLibre(texto) {
-            // separadores naturales
             const segs = texto
                 .split(/[,;]|\s+y\s+|\s+mas\s+|\s+más\s+|\s+tambien\s+|\s+también\s+/i)
                 .map(s => s.trim()).filter(s => s.length > 1);
 
-            const items = [];
+            const rawItems = [];
 
-            // palabras que indican cantidad coloquial (para detectarlas antes del producto)
             const CANT_WORDS = [
                 'cajon','cajón','cajones','caja','cajas','plancha','planchas',
                 'pack','packs','docena','docenas','fardo','fardos','bulto','bultos',
@@ -1237,6 +1235,7 @@
                 'un','una','uno','dos','tres','cuatro','cinco','seis','siete',
                 'ocho','nueve','diez','once','doce',
             ];
+            const STOP_WORDS = ['de','del','la','el','los','las','un','una','con','sin','x','por'];
 
             for (const seg of segs) {
                 const tokens = seg.split(/\s+/);
@@ -1247,46 +1246,37 @@
                 for (let i = 0; i < tokens.length; i++) {
                     const t = normStr(tokens[i]);
 
-                    // número directo
                     if (!cantFound && /^\d+$/.test(t)) {
                         cantidad = parseInt(t);
                         cantFound = true;
                         continue;
                     }
 
-                    // intenta combinar 2 tokens (ej: "media docena", "cajon de")
                     if (!cantFound && i < tokens.length - 1) {
                         const combo = normStr(tokens[i] + ' ' + tokens[i+1]);
                         const val2 = resolverCantidad(combo);
                         if (val2 !== null) { cantidad = val2; cantFound = true; i++; continue; }
                     }
 
-                    // token individual como cantidad
                     if (!cantFound && CANT_WORDS.includes(t)) {
                         const val1 = resolverCantidad(t);
                         if (val1 !== null) { cantidad = val1; cantFound = true; continue; }
                     }
 
-                    // filtrar palabras vacías
-                    if (!['de','del','la','el','los','las','un','una','con','sin','x'].includes(t)) {
-                        busquedaTokens.push(t);
-                    }
+                    if (!STOP_WORDS.includes(t)) busquedaTokens.push(t);
                 }
 
                 if (busquedaTokens.length === 0) continue;
 
-                // buscar en catálogo con puntuación
                 const terminos = busquedaTokens.filter(t => t.length >= 2);
                 const candidatos = data
                     .map(p => ({ p, pts: puntuar(p.nom, terminos) }))
                     .filter(x => x.pts > 0)
                     .sort((a,b) => b.pts - a.pts);
 
-                // agrupar los que tengan puntuación similar (posibles variantes)
                 let matches = [];
                 if (candidatos.length > 0) {
                     const topPts = candidatos[0].pts;
-                    // incluir todos los que tengan al menos 60% del puntaje top
                     matches = candidatos
                         .filter(x => x.pts >= topPts * 0.6)
                         .map(x => x.p)
@@ -1294,11 +1284,11 @@
                 }
 
                 let estado;
-                if (matches.length === 0)       estado = 'vacio';
-                else if (matches.length === 1)  estado = matches[0].stock <= 0 ? 'vacio' : 'ok';
-                else                             estado = 'multi';
+                if (matches.length === 0)      estado = 'vacio';
+                else if (matches.length === 1) estado = matches[0].stock <= 0 ? 'vacio' : 'ok';
+                else                            estado = 'multi';
 
-                items.push({
+                rawItems.push({
                     raw:          { busqueda: busquedaTokens.join(' '), cantidad, condicional: false },
                     matches,
                     cantidad,
@@ -1306,6 +1296,34 @@
                     estado,
                     seleccionado: estado === 'ok' ? matches[0].id : null
                 });
+            }
+
+            // ── ACUMULAR duplicados: si el mismo producto aparece más de una vez, sumar cantidades
+            const items = [];
+            for (const item of rawItems) {
+                // solo acumular si tiene producto único identificado
+                if (item.estado === 'ok' && item.seleccionado !== null) {
+                    const existing = items.find(i => i.seleccionado === item.seleccionado);
+                    if (existing) {
+                        existing.cantidad += item.cantidad;
+                        existing.raw.cantidad += item.cantidad;
+                        continue;
+                    }
+                }
+                // para 'multi': si los matches son idénticos, acumular también
+                if (item.estado === 'multi') {
+                    const matchIds = item.matches.map(m => m.id).join(',');
+                    const existing = items.find(i =>
+                        i.estado === 'multi' &&
+                        i.matches.map(m => m.id).join(',') === matchIds
+                    );
+                    if (existing) {
+                        existing.cantidad += item.cantidad;
+                        existing.raw.cantidad += item.cantidad;
+                        continue;
+                    }
+                }
+                items.push(item);
             }
 
             return items;

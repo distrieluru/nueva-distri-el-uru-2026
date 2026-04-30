@@ -551,9 +551,9 @@
             <div class="promo-header">
                 <div class="flex justify-between items-start">
                     <div>
-                        <p class="text-white/70 text-[10px] font-black uppercase tracking-[0.2em] mb-1">✨ Recién llegados</p>
-                        <h2 class="text-white text-2xl font-black italic uppercase leading-none">¡Mirá las novedades!</h2>
-                        <p class="text-white/60 text-xs mt-1 font-bold">Productos nuevos en el catálogo</p>
+                        <p id="promo-subtitulo" class="text-white/70 text-[10px] font-black uppercase tracking-[0.2em] mb-1">✨ Recién llegados</p>
+                        <h2 id="promo-titulo" class="text-white text-2xl font-black italic uppercase leading-none">¡Mirá las novedades!</h2>
+                        <p id="promo-desc" class="text-white/60 text-xs mt-1 font-bold">Productos nuevos en el catálogo</p>
                     </div>
                     <button onclick="cerrarPromo()" class="w-9 h-9 rounded-full bg-white/20 text-white text-xl flex items-center justify-center hover:bg-white/30 transition flex-shrink-0 ml-4">
                         &times;
@@ -977,6 +977,8 @@
                 const iBultos    = col('bultos');
                 const iDescuento = col('descuento');
                 const iPrecCosto = col('costo');
+                const iNuevo     = col('nuevo');
+                const iOferta    = col('oferta');
 
                 const idx = {
                     nom:      iNom       >= 0 ? iNom       : 0,
@@ -988,6 +990,8 @@
                     bultos:   iBultos    >= 0 ? iBultos    : 6,
                     descuento:iDescuento >= 0 ? iDescuento : 7,
                     costo:    iPrecCosto >= 0 ? iPrecCosto : 9,
+                    nuevo:    iNuevo,
+                    oferta:   iOferta,
                 };
 
                 console.log('[URU DEBUG] TSV OK — líneas:', lineas.length, '| Headers:', encabezados.join(' | '));
@@ -1010,8 +1014,15 @@
                     // Por ahora usamos columna Descuento vacía/llena como señal de oferta,
                     // y precio terminado en 1 SOLO para precios < 5000 (evita falsos positivos)
                     const precio = parseInt((c[idx.pre] || '').replace(/\D/g, '')) || 0;
-                    const esNuevo  = precio > 0 && precio % 10 === 1 && precio < 50000;
-                    const esOferta = precio > 0 && String(precio).endsWith('99');
+
+                    // esNuevo y esOferta: leídos desde columnas del sheet (nuevo / oferta)
+                    // Si la columna no existe en el sheet, cae en fallback por nombre
+                    const NUEVOS_FALLBACK = ['yerba playadito', 'vino termidor'];
+                    const nomLower = (c[idx.nom] || '').trim().toLowerCase();
+                    const colNuevoVal  = idx.nuevo  >= 0 ? (c[idx.nuevo]  || '').trim().toLowerCase() : '';
+                    const colOfertaVal = idx.oferta >= 0 ? (c[idx.oferta] || '').trim().toLowerCase() : '';
+                    const esNuevo  = colNuevoVal  === 'si' || (colNuevoVal  === '' && NUEVOS_FALLBACK.some(n => nomLower.includes(n)));
+                    const esOferta = colOfertaVal === 'si' && !esNuevo;
 
                     return {
                         id:            i,
@@ -1515,19 +1526,42 @@
             setTimeout(() => toast.classList.remove('show'), 2800);
         }
 
-        // ── POPUP NOVEDADES — FIX #6: usa campo esNuevo real ─────────────────
+        // ── POPUP NOVEDADES Y OFERTAS ─────────────────────────────────────────
         function mostrarPopupSiCorresponde() {
-            const nuevos = data.filter(p => p.stock > 0 && p.esNuevo).slice(0, 4);
-            if (nuevos.length === 0) return;
+            const nuevos  = data.filter(p => p.stock > 0 && p.esNuevo);
+            const ofertas = data.filter(p => p.stock > 0 && p.esOferta);
+            const todos   = [...nuevos, ...ofertas].slice(0, 6);
+            if (todos.length === 0) return;
 
-            renderPromo(nuevos);
+            // Ajustar header según contenido
+            const tieneNuevos  = nuevos.length > 0;
+            const tieneOfertas = ofertas.length > 0;
+            if (tieneNuevos && tieneOfertas) {
+                document.getElementById('promo-subtitulo').textContent = '🔥 Novedades y ofertas';
+                document.getElementById('promo-titulo').textContent    = '¡No te lo pierdas!';
+                document.getElementById('promo-desc').textContent      = 'Nuevos ingresos y ofertas del día';
+            } else if (tieneOfertas) {
+                document.getElementById('promo-subtitulo').textContent = '🔥 Oferta del día';
+                document.getElementById('promo-titulo').textContent    = '¡Precio especial hoy!';
+                document.getElementById('promo-desc').textContent      = 'Solo comprando por la web';
+            } else {
+                document.getElementById('promo-subtitulo').textContent = '✨ Recién llegados';
+                document.getElementById('promo-titulo').textContent    = '¡Mirá las novedades!';
+                document.getElementById('promo-desc').textContent      = 'Productos nuevos en el catálogo';
+            }
+
+            renderPromo(todos);
             setTimeout(() => {
                 document.getElementById('promo-overlay').classList.add('visible');
             }, 2500);
         }
 
         function renderPromo(productos) {
-            document.getElementById('promo-lista').innerHTML = productos.map(p => `
+            document.getElementById('promo-lista').innerHTML = productos.map(p => {
+                const badge = p.esNuevo
+                    ? '<span class="promo-badge-nuevo">NUEVO ✨</span>'
+                    : '<span style="display:inline-block;background:#ff0000;color:white;font-size:8px;font-weight:900;padding:2px 8px;border-radius:6px;text-transform:uppercase;letter-spacing:.1em;">OFERTA 🔥</span>';
+                return `
                 <div class="promo-card">
                     <div class="promo-img-wrap">
                         <img src="${p.img}" alt="${p.nom}" loading="lazy"
@@ -1538,14 +1572,14 @@
                         <h3 class="text-[var(--text-main)] font-black text-sm uppercase leading-tight truncate">${p.nom}</h3>
                         <div class="flex items-center gap-2 mt-1">
                             <span class="text-orange-500 font-black text-lg">$${p.pre.toLocaleString()}</span>
-                            <span class="promo-badge-nuevo">NUEVO ✨</span>
+                            ${badge}
                         </div>
                     </div>
                     <button class="btn-agregar-promo" id="promo-btn-${p.id}" onclick="agregarDesdePromo(${p.id})">
                         <i class="fas fa-plus" id="promo-icon-${p.id}"></i>
                     </button>
-                </div>
-            `).join('');
+                </div>`;
+            }).join('');
         }
 
         function agregarDesdePromo(id) {

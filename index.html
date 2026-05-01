@@ -934,18 +934,28 @@
         });
 
         // ── INICIO ───────────────────────────────────────────────────────────
+        // ── PERSISTENCIA CARRITO EN localStorage ─────────────────────────────
+        function guardarCarrito() {
+            localStorage.setItem('uru_cart',  JSON.stringify(cart));
+            localStorage.setItem('uru_notas', JSON.stringify(notas));
+        }
+
+        function restaurarCarrito() {
+            try {
+                const c = localStorage.getItem('uru_cart');
+                const n = localStorage.getItem('uru_notas');
+                if (c) { const parsed = JSON.parse(c); Object.entries(parsed).forEach(([k,v]) => { cart[parseInt(k)] = v; }); }
+                if (n) { const parsed = JSON.parse(n);  Object.entries(parsed).forEach(([k,v]) => { notas[parseInt(k)] = v; }); }
+            } catch(e) { console.warn('Error restaurando carrito:', e); }
+        }
+
         window.onload = () => {
             aplicarTema(temaActual);
             document.getElementById('user-name').value    = localStorage.getItem('uru_name')    || '';
             document.getElementById('user-address').value = localStorage.getItem('uru_address') || '';
 
-            // FIX #3: Cargar notas y carrito desde sessionStorage (persisten en recarga)
-            const notasGuardadas = sessionStorage.getItem('uru_notas_temp');
-            if (notasGuardadas) {
-                try { notas = JSON.parse(notasGuardadas); } catch(e) {}
-            }
-
-            cargarCarritoDesdeURL();
+            restaurarCarrito();
+            cargarCarritoDesdeURL(); // URL tiene prioridad sobre localStorage
 
             const catScroll = document.getElementById('category-filters');
             catScroll.addEventListener('wheel', (e) => {
@@ -1051,6 +1061,7 @@
 
                 renderCats();
                 render();
+                update(); // restaurar carrito visual tras cargar productos
                 verificarHorarioCierre();
                 if (!window._promoMostrada) { mostrarPopupSiCorresponde(); window._promoMostrada = true; }
 
@@ -1867,6 +1878,7 @@
             if (n > p.stock) { n = p.stock; Swal.fire('Stock Máximo', `Solo hay ${p.stock} unidades.`, 'warning'); }
             if (n <= 0) { delete cart[id]; delete notas[id]; }
             else         { cart[id] = n; }
+            guardarCarrito();
             update(); render();
         };
 
@@ -1889,18 +1901,18 @@
                 if (cart[id] === 1 && p.sugerido) verificarSugerencia(p.sugerido);
             }
 
+            guardarCarrito();
             update(); render();
         };
 
-        // ── FIX #3: NOTAS — persisten en sessionStorage ───────────────────────
+        // ── NOTAS ─────────────────────────────────────────────────────────────
         function guardarNota(id, valor) {
             if (valor.trim()) {
                 notas[id] = valor.trim();
             } else {
                 delete notas[id];
             }
-            // Guardar en sessionStorage para sobrevivir recargas
-            sessionStorage.setItem('uru_notas_temp', JSON.stringify(notas));
+            guardarCarrito();
         }
 
         // ── UPDATE CARRITO ────────────────────────────────────────────────────
@@ -2006,7 +2018,8 @@
             if (confirm('¿Vaciar el carrito?')) {
                 cart  = {};
                 notas = {};
-                sessionStorage.removeItem('uru_notas_temp');
+                localStorage.removeItem('uru_cart');
+                localStorage.removeItem('uru_notas');
                 update();
                 render();
             }
@@ -2107,7 +2120,8 @@
 
             cart  = {};
             notas = {};
-            sessionStorage.removeItem('uru_notas_temp');
+            localStorage.removeItem('uru_cart');
+            localStorage.removeItem('uru_notas');
             update(); render();
             document.getElementById('cart').style.display = 'none';
             setTimeout(() => load(), 3000);

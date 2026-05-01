@@ -1240,108 +1240,211 @@
             return pts;
         }
 
-        // Parsea texto libre en segmentos cantidad+producto
+        // ── PARSER INTELIGENTE ────────────────────────────────────────────────
+        // Estrategia dual:
+        //   1) Split por separadores explícitos (coma, "y", "mas", etc.)
+        //   2) Dentro de cada segmento, detectar boundaries por catálogo:
+        //      si hay múltiples palabras ancla que matchean productos DISTINTOS,
+        //      se subdivide el segmento en sub-ítems.
+        //   3) Si un producto pedido no tiene stock, busca alternativas similares.
+
+        const STOP_WORDS_SET = new Set(['de','del','la','el','los','las','un','una','con','sin','x','por','en','al','a','e','o','que','me','te','se','si','hay','tenes','quiero','dame','necesito','para','tambien','también','mas','más','y']);
+        const CANT_WORDS_MAP = {
+            'un':1,'una':1,'uno':1,'dos':2,'tres':3,'cuatro':4,'cinco':5,
+            'seis':6,'siete':7,'ocho':8,'nueve':9,'diez':10,'once':11,'doce':12,
+            'cajon':12,'cajón':12,'cajones':12,'caja':12,'cajas':12,
+            'plancha':12,'planchas':12,'pack':6,'packs':6,'six':6,
+            'docena':12,'docenas':12,'media':6,'fardo':10,'fardos':10,
+            'bulto':1,'bultos':1,'unidad':1,'unidades':1,'par':2,
+        };
+
+        // Dado un array de tokens de búsqueda, devuelve matches del catálogo
+        function buscarEnCatalogo(terminos) {
+            const t = terminos.filter(w => w.length >= 2);
+            if (t.length === 0) return [];
+            const candidatos = data
+                .map(p => ({ p, pts: puntuar(p.nom, t) }))
+                .filter(x => x.pts > 0)
+                .sort((a,b) => b.pts - a.pts);
+            if (candidatos.length === 0) return [];
+            const topPts = candidatos[0].pts;
+            return candidatos
+                .filter(x => x.pts >= topPts * 0.55)
+                .map(x => x.p)
+                .slice(0, 8);
+        }
+
+        // Detecta si un array de tokens contiene múltiples productos distintos
+        // y los divide. Ej: ["vino","harina","yerba"] → [["vino"],["harina"],["yerba"]]
+        function detectarBoundaries(tokens) {
+            if (tokens.length <= 1) return [tokens];
+
+            // Puntuar cada token individual contra el catálogo
+            const scores = tokens.map(t => {
+                if (STOP_WORDS_SET.has(t) || /^\d+$/.test(t)) return 0;
+                return data.reduce((max, p) => {
+                    const s = puntuar(p.nom, [t]);
+                    return s > max ? s : max;
+                }, 0);
+            });
+
+            // Si todos tienen score 0 o hay solo 1 token significativo → no dividir
+            const significativos = scores.filter(s => s > 0).length;
+            if (significativos <= 1) return [tokens];
+
+            // Detectar "picos" de score: cada pico es un nuevo producto
+            // Un pico es un token con score alto precedido de score bajo o diferente categoría
+            const grupos = [];
+            let grupoActual = [];
+            let lastAncla = -1;
+
+            for (let i = 0; i < tokens.length; i++) {
+                const t = tokens[i];
+                const s = scores[i];
+
+                if (s === 0) {
+                    // token sin score: va con el grupo actual si ya hay uno
+                    if (grupoActual.length > 0) grupoActual.push(t);
+                    continue;
+                }
+
+                // Es un token con score. Ver si matchea el mismo "cluster" que el ancla anterior
+                // o si es mejor interpretarlo como inicio de nuevo producto
+                if (grupoActual.length === 0) {
+                    grupoActual.push(t);
+                    lastAncla = i;
+                } else {
+                    // Comparar: ¿los mejores matches de grupoActual+t son los mismos que solo t?
+                    const matchesConActual = buscarEnCatalogo([...grupoActual.filter(w => !STOP_WORDS_SET.has(w)), t]);
+                    const matchesSolo      = buscarEnCatalogo([t]);
+
+                    // Si t solo ya matchea productos completamente distintos al grupo → nuevo segmento
+                    const idsConActual = new Set(matchesConActual.map(p => p.id));
+                    const idsSolo      = matchesSolo.map(p => p.id);
+                    const overlap      = idsSolo.filter(id => idsConActual.has(id)).length;
+
+                    // Si hay poca superposición Y el score del token solo es fuerte → nuevo segmento
+                    if (overlap === 0 && s >= 4 && grupoActual.filter(w => !STOP_WORDS_SET.has(w)).length >= 1) {
+                        grupos.push([...grupoActual]);
+                        grupoActual = [t];
+                        lastAncla = i;
+                    } else {
+                        grupoActual.push(t);
+                    }
+                }
+            }
+            if (grupoActual.length > 0) grupos.push(grupoActual);
+            return grupos.length > 0 ? grupos : [tokens];
+        }
+
+        // Busca alternativas en stock cuando el producto pedido no tiene stock
+        function buscarAlternativasConStock(terminos, matchesSinStock) {
+            // Intentar con los mismos términos pero filtrar solo con stock
+            const conStock = buscarEnCatalogo(terminos).filter(p => p.stock > 0);
+            if (conStock.length > 0) return { tipo: 'alternativa', matches: conStock };
+
+            // Si no, buscar por categoría de los matches sin stock
+            if (matchesSinStock.length > 0) {
+                const cat = matchesSinStock[0].cat;
+                const porCat = data.filter(p => p.cat === cat && p.stock > 0).slice(0, 6);
+                if (porCat.length > 0) return { tipo: 'categoria', matches: porCat, cat };
+            }
+            return null;
+        }
+
         function parsearTextoLibre(texto) {
-            const segs = texto
+            // PASO 1: split por separadores explícitos
+            const segsBrutos = texto
                 .split(/[,;]|\s+y\s+|\s+mas\s+|\s+más\s+|\s+tambien\s+|\s+también\s+/i)
                 .map(s => s.trim()).filter(s => s.length > 1);
 
             const rawItems = [];
 
-            const CANT_WORDS = [
-                'cajon','cajón','cajones','caja','cajas','plancha','planchas',
-                'pack','packs','docena','docenas','fardo','fardos','bulto','bultos',
-                'unidad','unidades','par','six','media',
-                'un','una','uno','dos','tres','cuatro','cinco','seis','siete',
-                'ocho','nueve','diez','once','doce',
-            ];
-            const STOP_WORDS = ['de','del','la','el','los','las','un','una','con','sin','x','por'];
-
-            for (const seg of segs) {
+            for (const seg of segsBrutos) {
                 const tokens = seg.split(/\s+/);
+
+                // Extraer cantidad del inicio del segmento
                 let cantidad = 1;
                 let cantFound = false;
-                let busquedaTokens = [];
+                let restTokens = [];
 
                 for (let i = 0; i < tokens.length; i++) {
                     const t = normStr(tokens[i]);
-
                     if (!cantFound && /^\d+$/.test(t)) {
-                        cantidad = parseInt(t);
-                        cantFound = true;
-                        continue;
+                        cantidad = parseInt(t); cantFound = true; continue;
                     }
-
                     if (!cantFound && i < tokens.length - 1) {
                         const combo = normStr(tokens[i] + ' ' + tokens[i+1]);
-                        const val2 = resolverCantidad(combo);
-                        if (val2 !== null) { cantidad = val2; cantFound = true; i++; continue; }
+                        if (CANT_WORDS_MAP[combo] !== undefined) {
+                            cantidad = CANT_WORDS_MAP[combo]; cantFound = true; i++; continue;
+                        }
                     }
-
-                    if (!cantFound && CANT_WORDS.includes(t)) {
-                        const val1 = resolverCantidad(t);
-                        if (val1 !== null) { cantidad = val1; cantFound = true; continue; }
+                    if (!cantFound && CANT_WORDS_MAP[normStr(t)] !== undefined) {
+                        cantidad = CANT_WORDS_MAP[normStr(t)]; cantFound = true; continue;
                     }
-
-                    if (!STOP_WORDS.includes(t)) busquedaTokens.push(t);
+                    restTokens.push(normStr(t));
                 }
 
-                if (busquedaTokens.length === 0) continue;
+                const keyTokens = restTokens.filter(t => !STOP_WORDS_SET.has(t) && t.length >= 2);
+                if (keyTokens.length === 0) continue;
 
-                const terminos = busquedaTokens.filter(t => t.length >= 2);
-                const candidatos = data
-                    .map(p => ({ p, pts: puntuar(p.nom, terminos) }))
-                    .filter(x => x.pts > 0)
-                    .sort((a,b) => b.pts - a.pts);
+                // PASO 2: detectar boundaries dentro del segmento
+                const subGrupos = detectarBoundaries(keyTokens);
 
-                let matches = [];
-                if (candidatos.length > 0) {
-                    const topPts = candidatos[0].pts;
-                    matches = candidatos
-                        .filter(x => x.pts >= topPts * 0.6)
-                        .map(x => x.p)
-                        .slice(0, 8);
+                for (const grupo of subGrupos) {
+                    const terminos = grupo.filter(t => !STOP_WORDS_SET.has(t) && t.length >= 2);
+                    if (terminos.length === 0) continue;
+
+                    const todosMatches = buscarEnCatalogo(terminos);
+                    const conStock     = todosMatches.filter(p => p.stock > 0);
+                    const sinStock     = todosMatches.filter(p => p.stock <= 0);
+
+                    let matches, estado, fallback = null;
+
+                    if (todosMatches.length === 0) {
+                        // No encontrado en absoluto
+                        matches = [];
+                        estado  = 'vacio';
+                    } else if (conStock.length > 0) {
+                        // Hay productos con stock → flujo normal
+                        matches = conStock;
+                        estado  = conStock.length === 1 ? 'ok' : 'multi';
+                    } else {
+                        // Todos sin stock → buscar alternativas
+                        const alt = buscarAlternativasConStock(terminos, sinStock);
+                        if (alt) {
+                            matches  = alt.matches;
+                            estado   = 'fallback';
+                            fallback = alt;
+                        } else {
+                            matches = sinStock;
+                            estado  = 'agotado';
+                        }
+                    }
+
+                    rawItems.push({
+                        raw:          { busqueda: terminos.join(' '), cantidad, condicional: false },
+                        matches,
+                        cantidad,
+                        estado,
+                        fallback,
+                        seleccionado: estado === 'ok' ? matches[0].id : null
+                    });
                 }
-
-                let estado;
-                if (matches.length === 0)      estado = 'vacio';
-                else if (matches.length === 1) estado = matches[0].stock <= 0 ? 'vacio' : 'ok';
-                else                            estado = 'multi';
-
-                rawItems.push({
-                    raw:          { busqueda: busquedaTokens.join(' '), cantidad, condicional: false },
-                    matches,
-                    cantidad,
-                    condicional:  false,
-                    estado,
-                    seleccionado: estado === 'ok' ? matches[0].id : null
-                });
             }
 
-            // ── ACUMULAR duplicados: si el mismo producto aparece más de una vez, sumar cantidades
+            // PASO 3: acumular duplicados
             const items = [];
             for (const item of rawItems) {
-                // solo acumular si tiene producto único identificado
                 if (item.estado === 'ok' && item.seleccionado !== null) {
-                    const existing = items.find(i => i.seleccionado === item.seleccionado);
-                    if (existing) {
-                        existing.cantidad += item.cantidad;
-                        existing.raw.cantidad += item.cantidad;
-                        continue;
-                    }
+                    const ex = items.find(i => i.seleccionado === item.seleccionado);
+                    if (ex) { ex.cantidad += item.cantidad; ex.raw.cantidad += item.cantidad; continue; }
                 }
-                // para 'multi': si los matches son idénticos, acumular también
-                if (item.estado === 'multi') {
+                if (item.estado === 'multi' || item.estado === 'fallback') {
                     const matchIds = item.matches.map(m => m.id).join(',');
-                    const existing = items.find(i =>
-                        i.estado === 'multi' &&
-                        i.matches.map(m => m.id).join(',') === matchIds
-                    );
-                    if (existing) {
-                        existing.cantidad += item.cantidad;
-                        existing.raw.cantidad += item.cantidad;
-                        continue;
-                    }
+                    const ex = items.find(i => (i.estado === 'multi' || i.estado === 'fallback') &&
+                        i.matches.map(m => m.id).join(',') === matchIds);
+                    if (ex) { ex.cantidad += item.cantidad; ex.raw.cantidad += item.cantidad; continue; }
                 }
                 items.push(item);
             }
@@ -1385,37 +1488,42 @@
 
         function renderPedidoNatural() {
             const lista = document.getElementById('pn-lista');
-            // Limpiar buscador del modal
             const pnSearch = document.getElementById('pn-search');
             if (pnSearch) pnSearch.value = '';
 
             lista.innerHTML = pedidoNaturalItems.map((item, idx) => {
-                const iconos = { ok: '✓', multi: '?', vacio: '✕', cond_skip: '—' };
-                const labels = {
-                    ok:        `<span class="text-green-500 font-black text-xs">→ ${item.matches[0].nom}</span>`,
-                    multi:     `<span class="text-orange-500 font-black text-xs">Elegí la variante ↓</span>`,
-                    vacio:     `<span class="text-red-400 font-black text-xs">No encontrado en catálogo</span>`,
-                    cond_skip: `<span class="text-gray-400 font-black text-xs">Sin stock — se omite</span>`
+
+                // ── Labels y colores según estado ──
+                const estadoConfig = {
+                    ok:       { icono: '✓', claseStatus: 'ok',    label: `<span class="text-green-500 font-black text-xs">→ ${item.matches[0]?.nom}</span>` },
+                    multi:    { icono: '?', claseStatus: 'multi', label: `<span class="text-orange-500 font-black text-xs">Elegí la variante ↓</span>` },
+                    fallback: { icono: '↻', claseStatus: 'multi', label: `<span class="text-yellow-500 font-black text-xs">⚠️ Sin stock — alternativas disponibles ↓</span>` },
+                    agotado:  { icono: '✕', claseStatus: 'vacio', label: `<span class="text-red-400 font-black text-xs">❌ Sin stock en ninguna variante de esta categoría</span>` },
+                    vacio:    { icono: '✕', claseStatus: 'vacio', label: `<span class="text-red-400 font-black text-xs">No encontrado en catálogo</span>` },
+                    cond_skip:{ icono: '—', claseStatus: 'cond',  label: `<span class="text-gray-400 font-black text-xs">Sin stock — se omite</span>` },
                 };
+                const cfg = estadoConfig[item.estado] || estadoConfig.vacio;
 
-                // Imagen del producto si es ok o multi
-                const imgSrc = item.estado === 'ok' && item.matches[0]
-                    ? item.matches[0].img
-                    : (item.estado === 'multi' && item.matches[0] ? item.matches[0].img : '');
-
+                // ── Imagen principal ──
+                const imgSrc = item.matches[0]?.img || '';
                 const imgHtml = imgSrc
                     ? `<div class="w-14 h-14 flex-shrink-0 rounded-xl bg-[var(--input-bg)] border border-[var(--border-color)] flex items-center justify-center overflow-hidden">
                            <img src="${imgSrc}" class="max-w-full max-h-full object-contain p-1"
                                 onerror="this.src='https://i.ibb.co/yB7ffL4T/unnamed.jpg'">
                        </div>`
-                    : `<div class="pn-status ${item.estado === 'cond_skip' ? 'cond' : item.estado}">${iconos[item.estado] || '?'}</div>`;
+                    : `<div class="pn-status ${cfg.claseStatus}">${cfg.icono}</div>`;
 
-                const selectorVariantes = item.estado === 'multi' ? `
+                // ── Selector de variantes (multi, fallback) ──
+                const mostrarSelector = item.estado === 'multi' || item.estado === 'fallback';
+                const selectorVariantes = mostrarSelector ? `
                     <div class="mt-3 space-y-1 max-h-56 overflow-y-auto pr-1" style="scrollbar-width:thin">
+                        ${item.estado === 'fallback' ? `
+                            <p class="text-[9px] font-black uppercase text-yellow-600 px-1 mb-2">
+                                📦 ${item.fallback?.tipo === 'categoria' ? `Otros productos de la categoría "${item.fallback.cat}"` : 'Productos similares disponibles'}:
+                            </p>` : ''}
                         ${item.matches.slice(0,8).map(p => `
                             <label class="flex items-center gap-3 cursor-pointer p-2 rounded-xl hover:bg-orange-500/10 transition border border-transparent hover:border-orange-500/30">
                                 <input type="radio" name="pn-var-${idx}" value="${p.id}"
-                                       ${p.stock <= 0 ? 'disabled' : ''}
                                        onchange="seleccionarVariantePN(${idx}, ${p.id})"
                                        class="accent-orange-500 w-4 h-4 flex-shrink-0">
                                 <div class="w-10 h-10 flex-shrink-0 rounded-lg bg-[var(--input-bg)] border border-[var(--border-color)] flex items-center justify-center overflow-hidden">
@@ -1423,30 +1531,30 @@
                                          onerror="this.src='https://i.ibb.co/yB7ffL4T/unnamed.jpg'">
                                 </div>
                                 <div class="flex-1 min-w-0">
-                                    <span class="text-xs font-bold text-[var(--text-main)] block leading-tight ${p.stock <= 0 ? 'opacity-40 line-through' : ''}">
-                                        ${p.nom}
-                                    </span>
+                                    <span class="text-xs font-bold text-[var(--text-main)] block leading-tight">${p.nom}</span>
                                     <span class="text-[10px] font-black text-orange-500">$${p.pre.toLocaleString()}</span>
-                                    ${p.stock <= 0 ? '<span class="text-[9px] text-red-400 ml-1">(sin stock)</span>' : `<span class="text-[9px] text-green-500 ml-1">${p.stock} disp.</span>`}
+                                    <span class="text-[9px] text-green-500 ml-1">${p.stock} disp.</span>
                                 </div>
                             </label>
                         `).join('')}
                     </div>` : '';
 
-                const cantDeshabilitado = item.estado === 'vacio' || item.estado === 'cond_skip';
+                const cantDeshabilitado = item.estado === 'vacio' || item.estado === 'agotado' || item.estado === 'cond_skip';
+                const claseItem = { ok:'ok', multi:'multi', fallback:'multi', agotado:'vacio', vacio:'vacio', cond_skip:'cond-skip' }[item.estado] || 'vacio';
+
                 return `
-                    <div class="pn-item ${item.estado === 'cond_skip' ? 'cond-skip' : item.estado}">
+                    <div class="pn-item ${claseItem}">
                         ${imgHtml}
                         <div class="flex-1 min-w-0">
                             <div class="flex items-start justify-between gap-2">
                                 <div class="flex-1">
                                     <span class="text-[var(--text-main)] font-black text-sm uppercase block">${item.raw.busqueda}</span>
-                                    <div class="text-[10px] text-[var(--text-muted)] mt-0.5">${labels[item.estado] || ''}</div>
+                                    <div class="mt-0.5">${cfg.label}</div>
                                 </div>
                                 <div class="flex items-center gap-1 flex-shrink-0 ${cantDeshabilitado ? 'opacity-30 pointer-events-none' : ''}">
                                     <button onclick="cambiarCantidadPN(${idx},-1)" class="w-7 h-7 rounded-lg bg-[var(--input-bg)] border border-[var(--border-color)] text-[var(--text-muted)] font-black text-sm flex items-center justify-center hover:border-orange-500 hover:text-orange-500 transition">－</button>
                                     <span class="w-7 text-center font-black text-sm text-[var(--text-main)]" id="pn-cant-${idx}">${item.cantidad}</span>
-                                    <button onclick="cambiarCantidadPN(${idx},1)"  class="w-7 h-7 rounded-lg bg-[var(--input-bg)] border border-[var(--border-color)] text-[var(--text-muted)] font-black text-sm flex items-center justify-center hover:border-orange-500 hover:text-orange-500 transition">＋</button>
+                                    <button onclick="cambiarCantidadPN(${idx},1)" class="w-7 h-7 rounded-lg bg-[var(--input-bg)] border border-[var(--border-color)] text-[var(--text-muted)] font-black text-sm flex items-center justify-center hover:border-orange-500 hover:text-orange-500 transition">＋</button>
                                 </div>
                             </div>
                             ${selectorVariantes}
@@ -1472,10 +1580,14 @@
             const agregados = [];
 
             pedidoNaturalItems.forEach(item => {
-                if (item.estado === 'vacio')     { errores.push(`"${item.raw.busqueda}" no encontrado`); return; }
+                if (item.estado === 'vacio' || item.estado === 'agotado') {
+                    errores.push(`"${item.raw.busqueda}": ${item.estado === 'agotado' ? 'sin stock en ninguna variante' : 'no encontrado'}`);
+                    return;
+                }
                 if (item.estado === 'cond_skip') { return; }
                 if (item.seleccionado === null || item.seleccionado === undefined) {
-                    if (item.estado === 'multi') errores.push(`"${item.raw.busqueda}": seleccioná una variante`);
+                    if (item.estado === 'multi' || item.estado === 'fallback')
+                        errores.push(`"${item.raw.busqueda}": seleccioná una variante`);
                     return;
                 }
 

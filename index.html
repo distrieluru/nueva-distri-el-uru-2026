@@ -1682,27 +1682,6 @@
             }
         }
 
-            cerrarPedidoNatural();
-            update();
-            render();
-            document.getElementById('search').value = '';
-            document.getElementById('btn-pedido-natural').classList.remove('visible');
-
-            if (agregados.length > 0) {
-                confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
-                Swal.fire({
-                    title: '🛒 ¡Pedido cargado!',
-                    html:  agregados.map(a => `<div class="text-sm text-left">✓ ${a}</div>`).join('') +
-                           (errores.length ? `<div class="mt-3 text-xs text-red-400 text-left">${errores.join('<br>')}</div>` : ''),
-                    icon:  'success',
-                    confirmButtonColor: '#ff6b00',
-                    confirmButtonText:  'Ver carrito'
-                }).then(() => { document.getElementById('cart').style.display = 'flex'; });
-            } else {
-                Swal.fire({ title: 'No se agregó nada', html: errores.join('<br>'), icon: 'warning', confirmButtonColor: '#ff6b00' });
-            }
-        }
-
         function cerrarPedidoNatural() {
             document.getElementById('pedido-natural-overlay').classList.remove('visible');
             pedidoNaturalItems = [];

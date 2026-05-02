@@ -213,7 +213,10 @@
         .modal-logistica {
             display: none; position: fixed; inset: 0;
             background: #000; z-index: 300; overflow-y: auto; padding: 20px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
         }
+        .modal-logistica.visible { opacity: 1; }
         .tabla-carga {
             width: 100%; border-collapse: collapse;
             background: #111; border-radius: 15px; overflow: hidden; margin-top: 20px;
@@ -383,33 +386,6 @@
         }
         .carrusel-card-btn:active { background: #ff3d00; }
         .carrusel-card-btn.car-agregado { background: #16a34a; }
-
-        .mic-btn {
-            width: 58px; height: 58px; flex-shrink: 0;
-            border-radius: 20px;
-            background: var(--input-bg);
-            border: 1px solid var(--border-color);
-            color: var(--text-muted);
-            display: flex; align-items: center; justify-content: center;
-            font-size: 1.2rem; cursor: pointer;
-            transition: all 0.25s ease;
-        }
-        .mic-btn:hover { border-color: #ff6b00; color: #ff6b00; }
-        .mic-btn.escuchando {
-            background: #ff6b00; color: white;
-            border-color: #ff6b00;
-            animation: pulse-mic 1s infinite;
-        }
-        /* FIX #4: Estado "procesando" para feedback visual entre stop y resultado */
-        .mic-btn.procesando {
-            background: #ff8c00; color: white;
-            border-color: #ff8c00;
-        }
-        @keyframes pulse-mic {
-            0%   { box-shadow: 0 0 0 0 rgba(255, 107, 0, 0.7); }
-            70%  { box-shadow: 0 0 0 14px rgba(255, 107, 0, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(255, 107, 0, 0); }
-        }
 
         .toggle-stock-btn {
             display: flex; align-items: center; gap: 8px;
@@ -784,10 +760,6 @@
                 <div id="ai-badge">✦ IA</div>
             </div>
 
-            <button id="mic-btn" class="mic-btn" onclick="activarVoz()" title="Buscar por voz">
-                <i id="mic-icon" class="fas fa-microphone"></i>
-            </button>
-
             <button onclick="verFavoritos()" id="btn-favs" class="w-14 h-14 flex-shrink-0 rounded-2xl bg-[var(--input-bg)] border border-[var(--border-color)] text-gray-500 flex items-center justify-center hover:text-red-500 transition-all">
                 <i class="fas fa-heart text-xl"></i>
             </button>
@@ -985,6 +957,21 @@
         const WA_NUM          = '5492920248292';
         // La API key de Claude vive en Apps Script (PropertiesService), nunca acá.
 
+        // ── CACHÉ TSV ──────────────────────────────────────────────────────────
+        const CACHE_KEY = 'uru_data_cache';
+        const CACHE_TTL = 5 * 60 * 1000; // 5 minutos
+
+        function guardarCache(texto) {
+            try { localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), txt: texto })); } catch(e) {}
+        }
+        function leerCache() {
+            try {
+                const c = JSON.parse(localStorage.getItem(CACHE_KEY));
+                if (c && Date.now() - c.ts < CACHE_TTL) return c.txt;
+            } catch(e) {}
+            return null;
+        }
+
         let data                   = [];
         let cart                   = {};
         let notas                  = {};
@@ -1039,12 +1026,22 @@
         // ── INICIO ───────────────────────────────────────────────────────────
         // ── PERSISTENCIA CARRITO EN localStorage ─────────────────────────────
         function guardarCarrito() {
-            localStorage.setItem('uru_cart',  JSON.stringify(cart));
-            localStorage.setItem('uru_notas', JSON.stringify(notas));
+            localStorage.setItem('uru_cart',    JSON.stringify(cart));
+            localStorage.setItem('uru_notas',   JSON.stringify(notas));
+            localStorage.setItem('uru_cart_ts', String(Date.now()));
         }
 
         function restaurarCarrito() {
             try {
+                // Expirar carrito si es de un día anterior
+                const ts = parseInt(localStorage.getItem('uru_cart_ts') || '0');
+                const hoy = new Date(); hoy.setHours(0,0,0,0);
+                if (ts && ts < hoy.getTime()) {
+                    localStorage.removeItem('uru_cart');
+                    localStorage.removeItem('uru_notas');
+                    localStorage.removeItem('uru_cart_ts');
+                    return;
+                }
                 const c = localStorage.getItem('uru_cart');
                 const n = localStorage.getItem('uru_notas');
                 if (c) { const parsed = JSON.parse(c); Object.entries(parsed).forEach(([k,v]) => { cart[parseInt(k)] = v; }); }
@@ -1080,8 +1077,13 @@
         // ── CARGA DE DATOS DESDE GOOGLE SHEETS ───────────────────────────────
         async function load() {
             try {
-                const res    = await fetch(TSV + '&t=' + Date.now());
-                const text   = await res.text();
+                // Usar caché si está fresco, y refrescar en background
+                const cached = leerCache();
+                const texto  = cached || await (await fetch(TSV + '&t=' + Date.now())).text();
+                if (!cached) guardarCache(texto);
+                else fetch(TSV + '&t=' + Date.now()).then(r => r.text()).then(t => { guardarCache(t); }).catch(() => {});
+
+                const text   = texto;
                 const lineas = text.split(/\r?\n/);
                 const encabezados = lineas[0].split('\t').map(h => h.trim().toLowerCase());
 
@@ -1189,63 +1191,6 @@
             const btn = document.getElementById('btn-stock');
             btn.classList.toggle('activo', soloConStock);
             render();
-        }
-
-        // ── BÚSQUEDA POR VOZ — FIX #4: feedback "procesando" ─────────────────
-        let recognition = null;
-
-        function activarVoz() {
-            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            if (!SpeechRecognition) {
-                Swal.fire({ title: 'No soportado', text: 'Tu navegador no soporta búsqueda por voz. Probá con Chrome.', icon: 'warning', confirmButtonColor: '#ff6b00' });
-                return;
-            }
-
-            const micBtn  = document.getElementById('mic-btn');
-            const micIcon = document.getElementById('mic-icon');
-
-            if (micBtn.classList.contains('escuchando')) {
-                detenerVoz();
-                return;
-            }
-
-            if (!recognition) {
-                recognition                 = new SpeechRecognition();
-                recognition.lang            = 'es-AR';
-                recognition.interimResults  = false;
-                recognition.maxAlternatives = 1;
-
-                recognition.onresult = (event) => {
-                    // FIX #4: estado "procesando" mientras muestra resultado
-                    micBtn.classList.remove('escuchando');
-                    micBtn.classList.add('procesando');
-                    micIcon.className = 'fas fa-spinner fa-spin';
-
-                    const textoReconocido = event.results[0][0].transcript;
-                    document.getElementById('search').value = textoReconocido;
-                    limpiarSugerenciaIA();
-                    manejarBusqueda();
-
-                    setTimeout(() => detenerVoz(), 600);
-                };
-
-                recognition.onerror = () => detenerVoz();
-                recognition.onend   = () => {
-                    if (!micBtn.classList.contains('procesando')) detenerVoz();
-                };
-            }
-
-            micBtn.classList.add('escuchando');
-            micIcon.className = 'fas fa-stop';
-            recognition.start();
-        }
-
-        function detenerVoz() {
-            if (recognition) { try { recognition.stop(); } catch (e) {} }
-            const micBtn  = document.getElementById('mic-btn');
-            const micIcon = document.getElementById('mic-icon');
-            micBtn.classList.remove('escuchando', 'procesando');
-            micIcon.className = 'fas fa-microphone';
         }
 
         // ── BÚSQUEDA CON VARIANTES + CORRECTOR IA ────────────────────────────
@@ -2630,11 +2575,15 @@
 
             tablaHTML += `</tbody></table>`;
             document.getElementById('cont-tabla-carga').innerHTML = tablaHTML;
-            document.getElementById('modal-logistica').style.display = 'block';
+            const modal = document.getElementById('modal-logistica');
+            modal.style.display = 'block';
+            requestAnimationFrame(() => modal.classList.add('visible'));
         }
 
         function cerrarLogistica() {
-            document.getElementById('modal-logistica').style.display = 'none';
+            const modal = document.getElementById('modal-logistica');
+            modal.classList.remove('visible');
+            setTimeout(() => { modal.style.display = 'none'; }, 300);
         }
 
         window.addEventListener('scroll', () => {

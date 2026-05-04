@@ -391,7 +391,6 @@
             border-color: #ff6b00;
             animation: pulse-mic 1s infinite;
         }
-        /* FIX #4: Estado "procesando" para feedback visual entre stop y resultado */
         .mic-btn.procesando {
             background: #ff8c00; color: white;
             border-color: #ff8c00;
@@ -493,7 +492,6 @@
         }
         .nota-textarea::placeholder { color: var(--text-muted); opacity: 0.55; }
 
-        /* ── BUSCADOR INTELIGENTE — estado IA activa ── */
         #search-wrapper.ai-thinking #search {
             border-color: #ff6b00;
             box-shadow: 0 0 0 2px rgba(255, 107, 0, 0.2);
@@ -522,7 +520,6 @@
             transition: opacity 0.3s ease;
         }
 
-        /* ── PEDIDO NATURAL — modal de confirmación ── */
         #pedido-natural-overlay {
             position: fixed; inset: 0; z-index: 500;
             background: rgba(0,0,0,0.85);
@@ -566,7 +563,6 @@
         .pn-status.vacio { background: rgba(239,68,68,0.15);  color: #ef4444; }
         .pn-status.cond  { background: rgba(156,163,175,0.1); color: #9ca3af; }
 
-        /* Botón de pedido natural — fila separada debajo del buscador */
         #btn-pedido-natural {
             flex-shrink: 0;
             background: linear-gradient(135deg,#ff6b00,#ff3d00);
@@ -609,11 +605,11 @@
             <div style="background:linear-gradient(135deg,#16a34a,#15803d);padding:28px 24px 20px;text-align:center;">
                 <div style="font-size:48px;margin-bottom:8px;">📱</div>
                 <p style="color:rgba(255,255,255,0.8);font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:0.2em;margin-bottom:4px;">Beneficio exclusivo</p>
-                <h2 style="color:white;font-size:28px;font-weight:900;font-style:italic;text-transform:uppercase;line-height:1.1;">¡3% de<br>Descuento!</h2>
+                <h2 id="descuento-titulo" style="color:white;font-size:28px;font-weight:900;font-style:italic;text-transform:uppercase;line-height:1.1;">¡3% de<br>Descuento!</h2>
             </div>
             <div style="padding:20px 24px 24px;text-align:center;">
                 <p style="color:var(--text-main);font-weight:900;font-size:15px;margin-bottom:6px;">Comprando por la aplicación</p>
-                <p style="color:var(--text-muted);font-size:12px;font-weight:600;margin-bottom:20px;">Aplicá el descuento al momento de confirmar tu pedido por WhatsApp</p>
+                <p style="color:var(--text-muted);font-size:12px;font-weight:600;margin-bottom:20px;">El descuento se aplica automáticamente en tu total antes de enviar el pedido</p>
                 <div style="background:rgba(22,163,74,0.1);border:1px solid rgba(22,163,74,0.25);border-radius:16px;padding:12px 16px;margin-bottom:20px;">
                     <p style="color:#16a34a;font-weight:900;font-size:11px;text-transform:uppercase;letter-spacing:0.08em;">💬 Mencioná al hacer el pedido:<br><span style="font-size:14px;">"Compro por la app"</span></p>
                 </div>
@@ -695,11 +691,11 @@
         </div>
     </div>
 
-    <!-- ── BANNER PROMOCIÓN DESCUENTO ── -->
+    <!-- ── BANNER PROMOCIÓN DESCUENTO — visible solo si hay promo activa ── -->
     <div id="banner-promo" style="display:none;"
          class="bg-gradient-to-r from-green-600 to-green-500 text-white text-center py-2.5 px-4 font-black text-sm uppercase tracking-widest border-b border-green-400/30">
         <span class="animate-pulse">🎉</span>
-        HOY <span id="banner-promo-porc">3</span>% DE DESCUENTO EN CADA PEDIDO
+        HOY <span id="banner-promo-porc">3</span>% DE DESCUENTO — SE APLICA AUTOMÁTICAMENTE
         <span class="animate-pulse">🎉</span>
     </div>
 
@@ -715,7 +711,6 @@
                 </div>
             </div>
             <div class="flex items-center gap-2">
-                <!-- FIX #1: Botón tema muestra tooltip con modo actual -->
                 <button onclick="ciclarTema()" class="mode-toggle" id="theme-toggle" title="Cambiar tema">
                     <i id="theme-icon" class="fas fa-circle-half-stroke"></i>
                 </button>
@@ -818,7 +813,7 @@
         </div>
     </div>
 
-    <!-- Barra mínimo compra — visible sin abrir carrito -->
+    <!-- Barra mínimo compra -->
     <div id="barra-minimo-global" class="px-4 max-w-5xl mx-auto mb-2" style="display:none;">
         <div class="flex justify-between items-center mb-1">
             <span class="text-[9px] font-black uppercase text-[var(--text-muted)]">Mínimo de compra</span>
@@ -888,7 +883,6 @@
                         &times;
                     </button>
                 </div>
-                <!-- Buscador dentro del modal para filtrar variantes -->
                 <div class="relative mt-3">
                     <input
                         type="text"
@@ -941,10 +935,10 @@
                     </div>
                 </div>
                 <div class="flex justify-between items-center px-1">
-                    <span class="text-[var(--text-muted)] font-black uppercase text-xs">Total:</span>
-                    <span class="text-orange-500 text-3xl font-black italic">$<span id="total">0</span></span>
+                    <span class="text-[var(--text-muted)] font-black uppercase text-xs">Subtotal:</span>
+                    <span class="text-[var(--text-muted)] text-2xl font-black">$<span id="total">0</span></span>
                 </div>
-                <!-- Descuento promo -->
+                <!-- Descuento — visible solo cuando promoActiva === true -->
                 <div id="fila-descuento" style="display:none;"
                      class="flex justify-between items-center px-1 bg-green-500/10 border border-green-500/30 rounded-xl p-2">
                     <span class="text-green-400 font-black uppercase text-xs">🎉 Descuento <span id="descuento-porc-label">3</span>%:</span>
@@ -952,8 +946,8 @@
                 </div>
                 <div id="fila-total-final" style="display:none;"
                      class="flex justify-between items-center px-1">
-                    <span class="text-green-400 font-black uppercase text-xs">Total con descuento:</span>
-                    <span class="text-green-400 text-2xl font-black italic">$<span id="total-final">0</span></span>
+                    <span class="text-orange-500 font-black uppercase text-sm">TOTAL:</span>
+                    <span class="text-orange-500 text-3xl font-black italic">$<span id="total-final">0</span></span>
                 </div>
                 <button id="btn-whatsapp" onclick="enviarPedido()" class="w-full bg-orange-600 text-white py-4 rounded-2xl font-black text-lg active:scale-95 transition-all shadow-xl">
                     ENVIAR POR WHATSAPP
@@ -999,7 +993,6 @@
         const SECRET_TOKEN    = 'uru2026-abc123';
         const MIN_COMPRA      = 25000;
         const WA_NUM          = '5492920248292';
-        // La API key de Claude vive en Apps Script (PropertiesService), nunca acá.
 
         let data                   = [];
         let cart                   = {};
@@ -1011,18 +1004,15 @@
         let variantesSeleccionadas = new Set();
         let variantesBusqueda      = [];
 
-        // ── PROMOCIÓN DESCUENTO ───────────────────────────────────────────────
+        // ── DESCUENTO — se establece SOLO desde verificarPromo(), nunca asumido ──
         let promoActiva     = false;
         let promoPorcentaje = 3;
 
-        // FIX #7: timer para evitar abrir modal inmediatamente mientras se filtra
-        let variantesTimer = null;
+        let variantesTimer      = null;
+        let searchDebounceTimer = null;
+        let aiSearchActive      = false;
 
-        // ── Estado búsqueda inteligente ───────────────────────────────────────
-        let searchDebounceTimer = null;   // debounce antes de llamar a Claude
-        let aiSearchActive      = false;  // true mientras Claude está procesando
-
-        // ── FEATURE 1: TEMA ──────────────────────────────────────────────────
+        // ── TEMA ──────────────────────────────────────────────────────────────
         const CICLO_TEMAS  = ['auto', 'light', 'dark'];
         const LABEL_TEMAS  = { auto: 'AUTO', light: '☀️ CLARO', dark: '🌙 OSCURO' };
         let temaActual = localStorage.getItem('uru_tema') || 'light';
@@ -1050,14 +1040,12 @@
             aplicarTema(temaActual);
         }
 
-        // ── TOAST ────────────────────────────────────────────────────────────
         const Toast = Swal.mixin({
             toast: true, position: 'top-end',
             showConfirmButton: false, timer: 1400, timerProgressBar: true
         });
 
-        // ── INICIO ───────────────────────────────────────────────────────────
-        // ── PERSISTENCIA CARRITO EN localStorage ─────────────────────────────
+        // ── PERSISTENCIA CARRITO ──────────────────────────────────────────────
         function guardarCarrito() {
             localStorage.setItem('uru_cart',  JSON.stringify(cart));
             localStorage.setItem('uru_notas', JSON.stringify(notas));
@@ -1072,13 +1060,18 @@
             } catch(e) { console.warn('Error restaurando carrito:', e); }
         }
 
-        window.onload = () => {
+        // ════════════════════════════════════════════════════════
+        // INICIO
+        // FIX: verificarPromo() corre PRIMERO (await) para saber
+        // si hay descuento ANTES de mostrar cualquier popup.
+        // ════════════════════════════════════════════════════════
+        window.onload = async () => {
             aplicarTema(temaActual);
             document.getElementById('user-name').value    = localStorage.getItem('uru_name')    || '';
             document.getElementById('user-address').value = localStorage.getItem('uru_address') || '';
 
             restaurarCarrito();
-            cargarCarritoDesdeURL(); // URL tiene prioridad sobre localStorage
+            cargarCarritoDesdeURL();
 
             const catScroll = document.getElementById('category-filters');
             catScroll.addEventListener('wheel', (e) => {
@@ -1086,11 +1079,14 @@
             });
 
             update();
+
+            // Primero verificar promo, después cargar catálogo
+            await verificarPromo();
             load();
+
             verificarHorarioCierre();
-            verificarPromo();
             setInterval(verificarHorarioCierre, 60000);
-            setInterval(load, 30000);
+            setInterval(() => load(false), 30000);
         };
 
         function saveUserData() {
@@ -1098,23 +1094,95 @@
             localStorage.setItem('uru_address', document.getElementById('user-address').value);
         }
 
-        // ── CARGA DE DATOS DESDE GOOGLE SHEETS ───────────────────────────────
-        async function load() {
+        // ════════════════════════════════════════════════════════
+        // VERIFICAR PROMO
+        // FIX: separado del endpoint corregir/pedido_natural —
+        // no necesita CLAUDE_KEY, solo consulta estado de promo.
+        // ════════════════════════════════════════════════════════
+        async function verificarPromo() {
+            try {
+                const url  = `${APPS_SCRIPT_URL}?action=promo&token=${encodeURIComponent(SECRET_TOKEN)}`;
+                const res  = await fetch(url);
+                const json = await res.json();
+
+                if (json.ok && json.activa) {
+                    promoActiva     = true;
+                    promoPorcentaje = json.porcentaje || 3;
+
+                    // Actualizar texto del popup con el % real
+                    const titulo = document.getElementById('descuento-titulo');
+                    if (titulo) titulo.innerHTML = `¡${promoPorcentaje}% de<br>Descuento!`;
+
+                    // Mostrar banner
+                    const banner = document.getElementById('banner-promo');
+                    if (banner) {
+                        document.getElementById('banner-promo-porc').textContent = promoPorcentaje;
+                        banner.style.display = 'block';
+                    }
+                    update();
+                } else {
+                    promoActiva = false;
+                    const banner = document.getElementById('banner-promo');
+                    if (banner) banner.style.display = 'none';
+                    update();
+                }
+            } catch(e) {
+                console.warn('[Promo]', e.message);
+                promoActiva = false;
+            }
+        }
+
+        // ════════════════════════════════════════════════════════
+        // POPUP DESCUENTO
+        // FIX: usa sessionStorage para mostrar 1 vez por sesión
+        // (no bloquea si la promo se activa durante el día)
+        // Solo se muestra si promoActiva === true.
+        // ════════════════════════════════════════════════════════
+        function mostrarDescuento() {
+            if (!promoActiva) {
+                // Sin promo activa: ir directo al popup de novedades
+                if (!window._promoMostrada) { mostrarPopupSiCorresponde(); window._promoMostrada = true; }
+                return;
+            }
+            // Con promo: mostrar popup de descuento una vez por sesión
+            const sessionKey = `uru_promo_vista_${promoPorcentaje}`;
+            if (sessionStorage.getItem(sessionKey)) {
+                // Ya se mostró en esta sesión, saltar al de novedades
+                if (!window._promoMostrada) { mostrarPopupSiCorresponde(); window._promoMostrada = true; }
+                return;
+            }
+            sessionStorage.setItem(sessionKey, '1');
+            setTimeout(() => {
+                document.getElementById('descuento-overlay').classList.add('visible');
+            }, 1800);
+        }
+
+        function cerrarDescuento() {
+            document.getElementById('descuento-overlay').classList.remove('visible');
+            if (!window._promoMostrada) { mostrarPopupSiCorresponde(); window._promoMostrada = true; }
+        }
+
+        function cerrarDescuentoSiClick(e) {
+            if (e.target === document.getElementById('descuento-overlay')) cerrarDescuento();
+        }
+
+        // ════════════════════════════════════════════════════════
+        // CARGA DE DATOS DESDE GOOGLE SHEETS
+        // showPopups: true en primera carga, false en reloads
+        // ════════════════════════════════════════════════════════
+        async function load(showPopups = true) {
             try {
                 const res    = await fetch(TSV + '&t=' + Date.now());
                 const text   = await res.text();
                 const lineas = text.split(/\r?\n/);
                 const encabezados = lineas[0].split('\t').map(h => h.trim().toLowerCase());
 
-                // FIX #4: Detección de columna Stock más robusta
-                // Busca "stock" que NO contenga "inicial" ni "costo"
                 const col = (nombre) => encabezados.findIndex(h => h.includes(nombre.toLowerCase()));
 
                 const iNom       = col('nombre');
                 const iPrecio    = col('precio');
                 const iCat       = col('categor');
                 const iImg       = col('imagen');
-                // FIX #4: stock: primera columna que contenga 'stock' pero NO 'inicial'
                 const iStock     = encabezados.findIndex(h => h.includes('stock') && !h.includes('inicial') && !h.includes('costo'));
                 const iSugerido  = col('sugerido');
                 const iBultos    = col('bultos');
@@ -1137,58 +1205,43 @@
                     oferta:   iOferta,
                 };
 
-                console.log('[URU DEBUG] TSV OK — líneas:', lineas.length, '| Headers:', encabezados.join(' | '));
-                console.log('[URU DEBUG] idx:', JSON.stringify(idx));
-
+                const NUEVOS_FALLBACK = ['yerba playadito', 'vino termidor'];
                 data = lineas.slice(1).map((l, i) => {
                     const c = l.split('\t');
                     if (!c[idx.nom] || !c[idx.nom].trim()) return null;
-
-                    // FIX #5: pack_precio — normalizar "3120c/u", "$3.120 c/u", "19099" → número limpio
-                    const descRaw = (c[idx.descuento] || '').trim();
-                    // Quitar todo excepto dígitos (el punto de miles también)
+                    const descRaw      = (c[idx.descuento] || '').trim();
                     const packPrecioNum = parseInt(descRaw.replace(/[^0-9]/g, '')) || 0;
-
-                    const bultosRaw = (c[idx.bultos] || '').trim();
-                    const packCantNum = parseInt(bultosRaw.replace(/[^0-9]/g, '')) || 0;
-
-                    // FIX #6: esNuevo/esOferta ahora son campos explícitos del sheet
-                    // Se detectan por campos reales, no por dígitos del precio
-                    // Por ahora usamos columna Descuento vacía/llena como señal de oferta,
-                    // y precio terminado en 1 SOLO para precios < 5000 (evita falsos positivos)
-                    const precio = parseInt((c[idx.pre] || '').replace(/\D/g, '')) || 0;
-
-                    // esNuevo y esOferta: leídos desde columnas del sheet (nuevo / oferta)
-                    // Si la columna no existe en el sheet, cae en fallback por nombre
-                    const NUEVOS_FALLBACK = ['yerba playadito', 'vino termidor'];
-                    const nomLower = (c[idx.nom] || '').trim().toLowerCase();
+                    const bultosRaw    = (c[idx.bultos] || '').trim();
+                    const packCantNum  = parseInt(bultosRaw.replace(/[^0-9]/g, '')) || 0;
+                    const precio       = parseInt((c[idx.pre] || '').replace(/\D/g, '')) || 0;
+                    const nomLower     = (c[idx.nom] || '').trim().toLowerCase();
                     const colNuevoVal  = idx.nuevo  >= 0 ? (c[idx.nuevo]  || '').trim().toLowerCase() : '';
                     const colOfertaVal = idx.oferta >= 0 ? (c[idx.oferta] || '').trim().toLowerCase() : '';
                     const esNuevo  = colNuevoVal  === 'si' || (colNuevoVal  === '' && NUEVOS_FALLBACK.some(n => nomLower.includes(n)));
                     const esOferta = colOfertaVal === 'si' && !esNuevo;
-
                     return {
-                        id:            i,
-                        nom:           c[idx.nom].trim(),
-                        pre:           precio,
-                        cat:           (c[idx.cat] || 'VARIOS').trim().toUpperCase(),
-                        img:           (c[idx.img] || '').trim(),
-                        stock:         parseFloat(c[idx.stock]) || 0,
-                        sugerido:      (c[idx.sugerido] || '').trim(),
-                        pack_cantidad: packCantNum,
-                        pack_precio:   packPrecioNum,
-                        costo:         parseFloat(c[idx.costo]) || 0,
-                        esNuevo,
-                        esOferta,
+                        id: i, nom: c[idx.nom].trim(), pre: precio,
+                        cat: (c[idx.cat] || 'VARIOS').trim().toUpperCase(),
+                        img: (c[idx.img] || '').trim(),
+                        stock: parseFloat(c[idx.stock]) || 0,
+                        sugerido: (c[idx.sugerido] || '').trim(),
+                        pack_cantidad: packCantNum, pack_precio: packPrecioNum,
+                        costo: parseFloat(c[idx.costo]) || 0,
+                        esNuevo, esOferta,
                     };
                 }).filter(Boolean);
 
                 renderCats();
                 render();
-                update(); // restaurar carrito visual tras cargar productos
+                update();
                 verificarHorarioCierre();
                 renderCarrusel();
-                if (!window._descuentoMostrado) { mostrarDescuento(); window._descuentoMostrado = true; }
+
+                // Popups solo en la primera carga y una vez
+                if (showPopups && !window._popupsMostrados) {
+                    window._popupsMostrados = true;
+                    mostrarDescuento(); // muestra descuento si hay promo, o novedades si no
+                }
 
             } catch (e) {
                 console.error('[URU ERROR]', e);
@@ -1212,7 +1265,7 @@
             render();
         }
 
-        // ── BÚSQUEDA POR VOZ — FIX #4: feedback "procesando" ─────────────────
+        // ── BÚSQUEDA POR VOZ ──────────────────────────────────────────────────
         let recognition = null;
 
         function activarVoz() {
@@ -1237,16 +1290,13 @@
                 recognition.maxAlternatives = 1;
 
                 recognition.onresult = (event) => {
-                    // FIX #4: estado "procesando" mientras muestra resultado
                     micBtn.classList.remove('escuchando');
                     micBtn.classList.add('procesando');
                     micIcon.className = 'fas fa-spinner fa-spin';
-
                     const textoReconocido = event.results[0][0].transcript;
                     document.getElementById('search').value = textoReconocido;
                     limpiarSugerenciaIA();
                     manejarBusqueda();
-
                     setTimeout(() => detenerVoz(), 600);
                 };
 
@@ -1278,19 +1328,16 @@
             if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
             limpiarSugerenciaIA();
 
-            // Detectar si parece un pedido complejo con cantidades o frases naturales
             const esPedidoComplejo = q.length > 15 ||
                 /\d/.test(q) ||
                 /\b(dame|necesito|quiero|si tenes|si hay|pack|cajón|cajon|plancha|caja|cajones|planchas)\b/i.test(q);
 
-            // Mostrar/ocultar botón "Pedido IA"
             const btnPN = document.getElementById('btn-pedido-natural');
             if (q.length > 5 && esPedidoComplejo) btnPN.classList.add('visible');
             else btnPN.classList.remove('visible');
 
             if (q.length < 2) return;
 
-            // Filtro rápido: "X o Y"
             const tieneOR = /\s+[oo]\s+/i.test(q);
             if (tieneOR) {
                 const terminos   = q.split(/\s+[oo]\s+/i).map(t => t.trim()).filter(Boolean);
@@ -1303,7 +1350,6 @@
                     variantesTimer = setTimeout(() => abrirVariantes(`${q} (con stock)`, candidatos), 600);
                 }
             } else if (!esPedidoComplejo) {
-                // Variantes solo para búsquedas simples
                 const palabras  = q.toLowerCase().split(/\s+/).filter(p => p.length > 3);
                 if (palabras.length > 0) {
                     const variantes = data.filter(p => p.nom.toLowerCase().includes(palabras[0]) && p.stock > 0);
@@ -1313,7 +1359,6 @@
                 }
             }
 
-            // Corrector IA solo para búsquedas simples sin resultados
             if (!esPedidoComplejo) {
                 searchDebounceTimer = setTimeout(() => {
                     const res0 = data.filter(p => p.nom.toLowerCase().includes(q.toLowerCase())).length;
@@ -1322,56 +1367,12 @@
             }
         }
 
-        // ── PEDIDO NATURAL: parser local amplio ──────────────────────────────
+        // ── PEDIDO NATURAL: parser local ──────────────────────────────────────
         let pedidoNaturalItems = [];
 
         function normStr(s) {
             return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
         }
-
-        // Palabras coloquiales → cantidad numérica
-        function resolverCantidad(tok) {
-            const MAP = {
-                'un':1,'una':1,'uno':1,'dos':2,'tres':3,'cuatro':4,'cinco':5,
-                'seis':6,'siete':7,'ocho':8,'nueve':9,'diez':10,'once':11,'doce':12,
-                'cajon':12,'cajón':12,'cajones':12,'cajon de':12,
-                'caja':12,'cajas':12,'caja de':12,
-                'plancha':12,'planchas':12,'plancha de':12,
-                'pack':6,'packs':6,'six pack':6,
-                'docena':12,'docenas':12,'media docena':6,
-                'fardo':10,'fardos':10,'bulto':1,'bultos':1,
-                'unidad':1,'unidades':1,'par':2,
-            };
-            const t = normStr(tok);
-            if (MAP[t] !== undefined) return MAP[t];
-            const n = parseInt(t);
-            return isNaN(n) ? null : n;
-        }
-
-        // Puntúa coincidencia entre nombre de producto y términos buscados
-        function puntuar(nomProd, terminos) {
-            const nom = normStr(nomProd);
-            let pts = 0;
-            for (const t of terminos) {
-                if (t.length < 3) continue;
-                if (nom.includes(t)) pts += t.length * 2;
-                else {
-                    // coincidencia parcial: al menos 3 chars seguidos
-                    for (let i = 0; i <= t.length - 3; i++) {
-                        if (nom.includes(t.slice(i, i+3))) { pts += 1; break; }
-                    }
-                }
-            }
-            return pts;
-        }
-
-        // ── PARSER INTELIGENTE ────────────────────────────────────────────────
-        // Estrategia dual:
-        //   1) Split por separadores explícitos (coma, "y", "mas", etc.)
-        //   2) Dentro de cada segmento, detectar boundaries por catálogo:
-        //      si hay múltiples palabras ancla que matchean productos DISTINTOS,
-        //      se subdivide el segmento en sub-ítems.
-        //   3) Si un producto pedido no tiene stock, busca alternativas similares.
 
         const STOP_WORDS_SET = new Set(['de','del','la','el','los','las','un','una','con','sin','x','por','en','al','a','e','o','que','me','te','se','si','hay','tenes','quiero','dame','necesito','para','tambien','también','mas','más','y']);
         const CANT_WORDS_MAP = {
@@ -1383,7 +1384,21 @@
             'bulto':1,'bultos':1,'unidad':1,'unidades':1,'par':2,
         };
 
-        // Dado un array de tokens de búsqueda, devuelve matches del catálogo
+        function puntuar(nomProd, terminos) {
+            const nom = normStr(nomProd);
+            let pts = 0;
+            for (const t of terminos) {
+                if (t.length < 3) continue;
+                if (nom.includes(t)) pts += t.length * 2;
+                else {
+                    for (let i = 0; i <= t.length - 3; i++) {
+                        if (nom.includes(t.slice(i, i+3))) { pts += 1; break; }
+                    }
+                }
+            }
+            return pts;
+        }
+
         function buscarEnCatalogo(terminos) {
             const t = terminos.filter(w => w.length >= 2);
             if (t.length === 0) return [];
@@ -1399,15 +1414,10 @@
                 .slice(0, 8);
         }
 
-        // Detecta si un array de tokens contiene múltiples productos distintos
-        // Agrupa tokens consecutivos que refieren al mismo producto, separa los que refieren a distintos.
         function detectarBoundaries(tokens) {
             if (tokens.length <= 1) return [tokens];
-
             const significativos = tokens.filter(t => !STOP_WORDS_SET.has(t) && t.length >= 3);
             if (significativos.length <= 1) return [tokens];
-
-            // Mapear cada token → producto top que matchea
             const topPorToken = {};
             for (const t of significativos) {
                 const matches = data
@@ -1416,44 +1426,24 @@
                     .sort((a,b) => b.pts - a.pts);
                 topPorToken[t] = matches.length > 0 ? { prod: matches[0].p, pts: matches[0].pts } : null;
             }
-
-            // Agrupar tokens consecutivos con el mismo producto top → mismo ítem
-            // Tokens con producto top diferente al anterior → nuevo ítem
             const grupos = [];
             let grupoActual = [significativos[0]];
             let topActual = topPorToken[significativos[0]]?.prod?.id ?? null;
-
             for (let i = 1; i < significativos.length; i++) {
                 const t = significativos[i];
                 const info = topPorToken[t];
                 const topEste = info?.prod?.id ?? null;
-
-                if (topEste === null) {
-                    // Sin match → va con grupo actual
-                    grupoActual.push(t);
-                } else if (topEste === topActual) {
-                    // Mismo producto top → mismo ítem (ej: "coca" + "cola", "perro" + "viejo")
-                    grupoActual.push(t);
-                } else {
-                    // Producto diferente → nuevo ítem
-                    grupos.push([...grupoActual]);
-                    grupoActual = [t];
-                    topActual = topEste;
-                }
+                if (topEste === null) { grupoActual.push(t); }
+                else if (topEste === topActual) { grupoActual.push(t); }
+                else { grupos.push([...grupoActual]); grupoActual = [t]; topActual = topEste; }
             }
             if (grupoActual.length > 0) grupos.push(grupoActual);
-
-            // Si solo quedó 1 grupo → no dividir (texto es un solo producto)
             return grupos.length > 1 ? grupos : [tokens];
         }
 
-        // Busca alternativas en stock cuando el producto pedido no tiene stock
         function buscarAlternativasConStock(terminos, matchesSinStock) {
-            // Intentar con los mismos términos pero filtrar solo con stock
             const conStock = buscarEnCatalogo(terminos).filter(p => p.stock > 0);
             if (conStock.length > 0) return { tipo: 'alternativa', matches: conStock };
-
-            // Si no, buscar por categoría de los matches sin stock
             if (matchesSinStock.length > 0) {
                 const cat = matchesSinStock[0].cat;
                 const porCat = data.filter(p => p.cat === cat && p.stock > 0).slice(0, 6);
@@ -1463,7 +1453,6 @@
         }
 
         function parsearTextoLibre(texto) {
-            // PASO 1: split por separadores explícitos
             const segsBrutos = texto
                 .split(/[,;]|\s+y\s+|\s+mas\s+|\s+más\s+|\s+tambien\s+|\s+también\s+/i)
                 .map(s => s.trim()).filter(s => s.length > 1);
@@ -1472,33 +1461,22 @@
 
             for (const seg of segsBrutos) {
                 const tokens = seg.split(/\s+/);
-
-                // Extraer cantidad del inicio del segmento
-                let cantidad = 1;
-                let cantFound = false;
-                let restTokens = [];
+                let cantidad = 1, cantFound = false, restTokens = [];
 
                 for (let i = 0; i < tokens.length; i++) {
                     const t = normStr(tokens[i]);
-                    if (!cantFound && /^\d+$/.test(t)) {
-                        cantidad = parseInt(t); cantFound = true; continue;
-                    }
+                    if (!cantFound && /^\d+$/.test(t)) { cantidad = parseInt(t); cantFound = true; continue; }
                     if (!cantFound && i < tokens.length - 1) {
                         const combo = normStr(tokens[i] + ' ' + tokens[i+1]);
-                        if (CANT_WORDS_MAP[combo] !== undefined) {
-                            cantidad = CANT_WORDS_MAP[combo]; cantFound = true; i++; continue;
-                        }
+                        if (CANT_WORDS_MAP[combo] !== undefined) { cantidad = CANT_WORDS_MAP[combo]; cantFound = true; i++; continue; }
                     }
-                    if (!cantFound && CANT_WORDS_MAP[normStr(t)] !== undefined) {
-                        cantidad = CANT_WORDS_MAP[normStr(t)]; cantFound = true; continue;
-                    }
+                    if (!cantFound && CANT_WORDS_MAP[normStr(t)] !== undefined) { cantidad = CANT_WORDS_MAP[normStr(t)]; cantFound = true; continue; }
                     restTokens.push(normStr(t));
                 }
 
                 const keyTokens = restTokens.filter(t => !STOP_WORDS_SET.has(t) && t.length >= 2);
                 if (keyTokens.length === 0) continue;
 
-                // PASO 2: detectar boundaries dentro del segmento
                 const subGrupos = detectarBoundaries(keyTokens);
 
                 for (const grupo of subGrupos) {
@@ -1508,42 +1486,20 @@
                     const todosMatches = buscarEnCatalogo(terminos);
                     const conStock     = todosMatches.filter(p => p.stock > 0);
                     const sinStock     = todosMatches.filter(p => p.stock <= 0);
-
                     let matches, estado, fallback = null;
 
-                    if (todosMatches.length === 0) {
-                        // No encontrado en absoluto
-                        matches = [];
-                        estado  = 'vacio';
-                    } else if (conStock.length > 0) {
-                        // Hay productos con stock → flujo normal
-                        matches = conStock;
-                        estado  = conStock.length === 1 ? 'ok' : 'multi';
-                    } else {
-                        // Todos sin stock → buscar alternativas
+                    if (todosMatches.length === 0) { matches = []; estado = 'vacio'; }
+                    else if (conStock.length > 0) { matches = conStock; estado = conStock.length === 1 ? 'ok' : 'multi'; }
+                    else {
                         const alt = buscarAlternativasConStock(terminos, sinStock);
-                        if (alt) {
-                            matches  = alt.matches;
-                            estado   = 'fallback';
-                            fallback = alt;
-                        } else {
-                            matches = sinStock;
-                            estado  = 'agotado';
-                        }
+                        if (alt) { matches = alt.matches; estado = 'fallback'; fallback = alt; }
+                        else { matches = sinStock; estado = 'agotado'; }
                     }
 
-                    rawItems.push({
-                        raw:          { busqueda: terminos.join(' '), cantidad, condicional: false },
-                        matches,
-                        cantidad,
-                        estado,
-                        fallback,
-                        seleccionado: estado === 'ok' ? matches[0].id : null
-                    });
+                    rawItems.push({ raw: { busqueda: terminos.join(' '), cantidad, condicional: false }, matches, cantidad, estado, fallback, seleccionado: estado === 'ok' ? matches[0].id : null });
                 }
             }
 
-            // PASO 3: acumular duplicados
             const items = [];
             for (const item of rawItems) {
                 if (item.estado === 'ok' && item.seleccionado !== null) {
@@ -1558,30 +1514,20 @@
                 }
                 items.push(item);
             }
-
             return items;
         }
 
         function lanzarPedidoNatural() {
             const q = document.getElementById('search').value.trim();
             if (!q || q.length < 3) return;
-
             const btn = document.getElementById('btn-pedido-natural');
             btn.textContent = '⏳ Analizando...';
             btn.style.pointerEvents = 'none';
-
-            // pequeño delay para dar feedback visual
             setTimeout(() => {
                 pedidoNaturalItems = parsearTextoLibre(q);
-
                 btn.textContent = '✦ Pedido IA';
                 btn.style.pointerEvents = '';
-
-                if (pedidoNaturalItems.length === 0) {
-                    Toast.fire({ icon: 'warning', title: 'No encontré productos en ese texto' });
-                    return;
-                }
-
+                if (pedidoNaturalItems.length === 0) { Toast.fire({ icon: 'warning', title: 'No encontré productos en ese texto' }); return; }
                 renderPedidoNatural();
                 document.getElementById('pedido-natural-overlay').classList.add('visible');
             }, 300);
@@ -1602,8 +1548,6 @@
             if (pnSearch) pnSearch.value = '';
 
             lista.innerHTML = pedidoNaturalItems.map((item, idx) => {
-
-                // ── Labels y colores según estado ──
                 const estadoConfig = {
                     ok:       { icono: '✓', claseStatus: 'ok',    label: `<span class="text-green-500 font-black text-xs">→ ${item.matches[0]?.nom}</span>` },
                     multi:    { icono: '?', claseStatus: 'multi', label: `<span class="text-orange-500 font-black text-xs">Elegí la variante ↓</span>` },
@@ -1614,7 +1558,6 @@
                 };
                 const cfg = estadoConfig[item.estado] || estadoConfig.vacio;
 
-                // ── Imagen principal ──
                 const imgSrc = item.matches[0]?.img || '';
                 const imgHtml = imgSrc
                     ? `<div class="w-14 h-14 flex-shrink-0 rounded-xl bg-[var(--input-bg)] border border-[var(--border-color)] flex items-center justify-center overflow-hidden">
@@ -1623,7 +1566,6 @@
                        </div>`
                     : `<div class="pn-status ${cfg.claseStatus}">${cfg.icono}</div>`;
 
-                // ── Selector de variantes con checkbox + cantidad individual ──
                 const mostrarSelector = item.estado === 'multi' || item.estado === 'fallback';
                 const selectorVariantes = mostrarSelector ? `
                     <div class="mt-3 space-y-2 max-h-64 overflow-y-auto pr-1" style="scrollbar-width:thin">
@@ -1652,7 +1594,6 @@
                                         <span class="text-[9px] text-green-500 ml-1">${p.stock} disp.</span>
                                     </div>
                                 </label>
-                                <!-- Cantidad individual — aparece al seleccionar -->
                                 <div id="cant-row-${idx}-${p.id}"
                                      style="display:none"
                                      class="flex items-center justify-between px-3 pb-2 gap-2">
@@ -1671,7 +1612,6 @@
                     </div>` : '';
 
                 const cantDeshabilitado = item.estado === 'vacio' || item.estado === 'agotado' || item.estado === 'cond_skip';
-                // Para estado ok: mostrar cantidad global; para multi: se maneja por variante
                 const mostrarCantGlobal = item.estado === 'ok';
                 const claseItem = { ok:'ok', multi:'multi', fallback:'multi', agotado:'vacio', vacio:'vacio', cond_skip:'cond-skip' }[item.estado] || 'vacio';
 
@@ -1698,7 +1638,6 @@
             }).join('');
         }
 
-        // Mapa: "idx-prodId" → cantidad seleccionada
         const varianteCantidades = {};
 
         function toggleVariantePN(idx, prodId) {
@@ -1706,23 +1645,15 @@
             const chk     = document.getElementById(`chk-${idx}-${prodId}`);
             const cantRow = document.getElementById(`cant-row-${idx}-${prodId}`);
             const row     = document.getElementById(`var-row-${idx}-${prodId}`);
-
             if (varianteCantidades[key] !== undefined) {
-                // Deseleccionar
                 delete varianteCantidades[key];
-                chk.innerHTML = '';
-                chk.style.background = 'transparent';
-                chk.style.borderColor = '';
-                cantRow.style.display = 'none';
-                row.style.borderColor = '';
+                chk.innerHTML = ''; chk.style.background = 'transparent'; chk.style.borderColor = '';
+                cantRow.style.display = 'none'; row.style.borderColor = '';
             } else {
-                // Seleccionar
                 varianteCantidades[key] = 1;
                 chk.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12"><polyline points="1,6 4,10 11,2" stroke="white" stroke-width="2" fill="none" stroke-linecap="round"/></svg>';
-                chk.style.background = '#ff6b00';
-                chk.style.borderColor = '#ff6b00';
-                cantRow.style.display = 'flex';
-                row.style.borderColor = 'rgba(255,107,0,0.5)';
+                chk.style.background = '#ff6b00'; chk.style.borderColor = '#ff6b00';
+                cantRow.style.display = 'flex'; row.style.borderColor = 'rgba(255,107,0,0.5)';
             }
         }
 
@@ -1754,25 +1685,16 @@
                 if (item.estado === 'cond_skip') return;
 
                 if (item.estado === 'ok') {
-                    // Producto único — usar cantidad global
-                    const p = data[item.seleccionado];
-                    if (!p) return;
+                    const p = data[item.seleccionado]; if (!p) return;
                     const cantFinal = Math.min(item.cantidad, p.stock);
                     if (cantFinal <= 0) { errores.push(`"${p.nom}" sin stock`); return; }
                     cart[item.seleccionado] = (cart[item.seleccionado] || 0) + cantFinal;
                     agregados.push(`${cantFinal}x ${p.nom}`);
-
                 } else if (item.estado === 'multi' || item.estado === 'fallback') {
-                    // Múltiples variantes — leer checkboxes seleccionados
                     const seleccionados = item.matches
                         .map(p => ({ p, cant: varianteCantidades[`${idx}-${p.id}`] }))
                         .filter(x => x.cant !== undefined);
-
-                    if (seleccionados.length === 0) {
-                        errores.push(`"${item.raw.busqueda}": seleccioná al menos una variante`);
-                        return;
-                    }
-
+                    if (seleccionados.length === 0) { errores.push(`"${item.raw.busqueda}": seleccioná al menos una variante`); return; }
                     seleccionados.forEach(({ p, cant }) => {
                         const cantFinal = Math.min(cant, p.stock);
                         if (cantFinal <= 0) { errores.push(`"${p.nom}" sin stock`); return; }
@@ -1782,13 +1704,9 @@
                 }
             });
 
-            // Limpiar mapa de cantidades de variantes
             Object.keys(varianteCantidades).forEach(k => delete varianteCantidades[k]);
-
             cerrarPedidoNatural();
-            guardarCarrito();
-            update();
-            render();
+            guardarCarrito(); update(); render();
             document.getElementById('search').value = '';
             document.getElementById('btn-pedido-natural').classList.remove('visible');
 
@@ -1798,9 +1716,7 @@
                     title: '🛒 ¡Pedido cargado!',
                     html:  agregados.map(a => `<div class="text-sm text-left">✓ ${a}</div>`).join('') +
                            (errores.length ? `<div class="mt-3 text-xs text-red-400 text-left">${errores.join('<br>')}</div>` : ''),
-                    icon:  'success',
-                    confirmButtonColor: '#ff6b00',
-                    confirmButtonText:  'Ver carrito'
+                    icon:  'success', confirmButtonColor: '#ff6b00', confirmButtonText: 'Ver carrito'
                 }).then(() => { document.getElementById('cart').style.display = 'flex'; });
             } else {
                 Swal.fire({ title: 'No se agregó nada', html: errores.join('<br>'), icon: 'warning', confirmButtonColor: '#ff6b00' });
@@ -1812,41 +1728,31 @@
             pedidoNaturalItems = [];
             Object.keys(varianteCantidades).forEach(k => delete varianteCantidades[k]);
         }
-
         function cerrarPedidoNaturalSiClick(e) {
             if (e.target === document.getElementById('pedido-natural-overlay')) cerrarPedidoNatural();
         }
 
-        // ── CORRECTOR CON CLAUDE — vía proxy Apps Script ──────────────────────
+        // ── CORRECTOR CON CLAUDE ──────────────────────────────────────────────
         async function corregirConClaude(queryOriginal) {
             if (aiSearchActive) return;
             aiSearchActive = true;
-
             const wrapper = document.getElementById('search-wrapper');
             wrapper.classList.add('ai-thinking');
-
             try {
-                // Llama al Apps Script (doGet) que internamente llama a Claude con la key segura
                 const url = `${APPS_SCRIPT_URL}?action=corregir&q=${encodeURIComponent(queryOriginal)}&token=${encodeURIComponent(SECRET_TOKEN)}`;
                 const res  = await fetch(url);
                 const json = await res.json();
-
                 if (json.ok && json.corregido && json.corregido.toLowerCase() !== queryOriginal.toLowerCase()) {
                     mostrarSugerenciaIA(queryOriginal, json.corregido);
                 }
-            } catch (e) {
-                console.warn('[Claude Search proxy]', e.message);
-            } finally {
-                aiSearchActive = false;
-                wrapper.classList.remove('ai-thinking');
-            }
+            } catch (e) { console.warn('[Claude Search proxy]', e.message); }
+            finally { aiSearchActive = false; wrapper.classList.remove('ai-thinking'); }
         }
 
-        // ── UI: sugerencia IA debajo del buscador ─────────────────────────────
         function mostrarSugerenciaIA(original, corregido) {
             const el = document.getElementById('ai-sugerencia');
             el.innerHTML = `
-                ✦ IA sugiere: 
+                ✦ IA sugiere:
                 <button onclick="aplicarCorreccionIA('${corregido.replace(/'/g, "\\'")}')"
                         class="underline text-orange-500 font-black hover:text-orange-400 transition">
                     "${corregido}"
@@ -1854,27 +1760,15 @@
                 <button onclick="limpiarSugerenciaIA()" class="ml-2 text-[var(--text-muted)] hover:text-red-400 transition text-[9px]">✕</button>
             `;
         }
+        function aplicarCorreccionIA(texto) { document.getElementById('search').value = texto; limpiarSugerenciaIA(); manejarBusqueda(); }
+        function limpiarSugerenciaIA() { const el = document.getElementById('ai-sugerencia'); if (el) el.innerHTML = ''; }
 
-        function aplicarCorreccionIA(texto) {
-            document.getElementById('search').value = texto;
-            limpiarSugerenciaIA();
-            manejarBusqueda();
-        }
-
-        function limpiarSugerenciaIA() {
-            const el = document.getElementById('ai-sugerencia');
-            if (el) el.innerHTML = '';
-        }
-
-        let variantesCantidades = {}; // id → cantidad
+        // ── VARIANTES ─────────────────────────────────────────────────────────
+        let variantesCantidades = {};
 
         function abrirVariantes(busqueda, productos) {
-            variantesBusqueda      = productos;
-            variantesSeleccionadas = new Set();
-            variantesCantidades    = {};
-
+            variantesBusqueda = productos; variantesSeleccionadas = new Set(); variantesCantidades = {};
             document.getElementById('variantes-titulo').textContent = busqueda.toUpperCase();
-
             const lista = document.getElementById('variantes-lista');
             lista.innerHTML = productos.map(p => {
                 const chipClass = p.stock > 5 ? 'stock-chip-ok' : 'stock-chip-low';
@@ -1893,18 +1787,16 @@
                                 <span class="text-orange-500 font-black text-base">$${p.pre.toLocaleString()}</span>
                                 <span class="text-[9px] font-black uppercase px-2 py-0.5 rounded-lg ${chipClass}">${chipText}</span>
                             </div>
-                            <!-- Cantidad — aparece al seleccionar -->
                             <div id="var-cant-row-${p.id}" style="display:none" class="flex items-center gap-2 mt-2" onclick="event.stopPropagation()">
                                 <span class="text-[9px] text-[var(--text-muted)] font-black uppercase">Cant:</span>
                                 <button onclick="cambiarCantVar(${p.id},-1)" class="w-6 h-6 rounded-lg bg-[var(--input-bg)] border border-[var(--border-color)] text-[var(--text-muted)] font-black text-xs flex items-center justify-center hover:border-orange-500 hover:text-orange-500 transition">－</button>
                                 <span id="var-cant-val-${p.id}" class="w-6 text-center font-black text-sm text-[var(--text-main)]">1</span>
-                                <button onclick="cambiarCantVar(${p.id},1)"  class="w-6 h-6 rounded-lg bg-[var(--input-bg)] border border-[var(--border-color)] text-[var(--text-muted)] font-black text-xs flex items-center justify-center hover:border-orange-500 hover:text-orange-500 transition">＋</button>
+                                <button onclick="cambiarCantVar(${p.id},1)" class="w-6 h-6 rounded-lg bg-[var(--input-bg)] border border-[var(--border-color)] text-[var(--text-muted)] font-black text-xs flex items-center justify-center hover:border-orange-500 hover:text-orange-500 transition">＋</button>
                             </div>
                         </div>
                     </div>
                 `;
             }).join('');
-
             document.getElementById('variantes-overlay').classList.add('visible');
         }
 
@@ -1912,15 +1804,11 @@
             const card    = document.getElementById(`var-card-${id}`);
             const cantRow = document.getElementById(`var-cant-row-${id}`);
             if (variantesSeleccionadas.has(id)) {
-                variantesSeleccionadas.delete(id);
-                delete variantesCantidades[id];
-                card.classList.remove('seleccionada');
-                cantRow.style.display = 'none';
+                variantesSeleccionadas.delete(id); delete variantesCantidades[id];
+                card.classList.remove('seleccionada'); cantRow.style.display = 'none';
             } else {
-                variantesSeleccionadas.add(id);
-                variantesCantidades[id] = 1;
-                card.classList.add('seleccionada');
-                cantRow.style.display = 'flex';
+                variantesSeleccionadas.add(id); variantesCantidades[id] = 1;
+                card.classList.add('seleccionada'); cantRow.style.display = 'flex';
             }
         }
 
@@ -1945,64 +1833,47 @@
 
         function cerrarVariantes() {
             document.getElementById('variantes-overlay').classList.remove('visible');
-            variantesBusqueda      = [];
-            variantesSeleccionadas = new Set();
-            variantesCantidades    = {};
+            variantesBusqueda = []; variantesSeleccionadas = new Set(); variantesCantidades = {};
         }
-
         function cerrarVariantesSiClick(e) {
             if (e.target === document.getElementById('variantes-overlay')) cerrarVariantes();
         }
 
-        // ── COMPARTIR PRESUPUESTO — FIX #8: usa encodeURIComponent sin btoa ──
+        // ── COMPARTIR PRESUPUESTO ─────────────────────────────────────────────
         function compartirPresupuesto() {
             if (Object.keys(cart).length === 0) {
                 Swal.fire({ title: 'Carrito vacío', text: 'Agregá productos antes de compartir.', icon: 'info', confirmButtonColor: '#ff6b00' });
                 return;
             }
-
-            // FIX #8: JSON + encodeURIComponent, sin btoa (más compatible en mobile)
             const payload        = JSON.stringify({ cart, notas });
             const encoded        = encodeURIComponent(payload);
             const baseUrl        = window.location.href.split('?')[0];
             const linkCompartido = `${baseUrl}?carrito=${encoded}`;
-
             if (navigator.share) {
                 navigator.share({ title: '🛒 Presupuesto — Distri El Uru', url: linkCompartido }).catch(() => {});
             } else {
                 navigator.clipboard.writeText(linkCompartido).then(() => mostrarShareToast());
             }
-
             const nombre   = document.getElementById('user-name').value.trim();
-            const totalStr = document.getElementById('total').innerText;
+            const totalBruto = parseInt((document.getElementById('total').innerText || '0').replace(/\./g,'')) || 0;
             let msg = `*PRESUPUESTO — DISTRI EL URU*%0A`;
             if (nombre) msg += `👤 Comercio: ${nombre}%0A`;
-            msg += `💰 Total estimado: $${totalStr}%0A`;
+            msg += `💰 Total estimado: $${totalBruto.toLocaleString()}%0A`;
             msg += `🔗 Ver presupuesto: ${encodeURIComponent(linkCompartido)}`;
             setTimeout(() => window.open(`https://wa.me/${WA_NUM}?text=${msg}`), 600);
         }
 
-        // FIX #8: cargar carrito desde URL con el nuevo formato
         function cargarCarritoDesdeURL() {
             const params  = new URLSearchParams(window.location.search);
             const encoded = params.get('carrito');
             if (!encoded) return;
-
             try {
                 const payload = JSON.parse(decodeURIComponent(encoded));
-                if (payload.cart) {
-                    cart = {};
-                    Object.entries(payload.cart).forEach(([k, v]) => { cart[parseInt(k)] = v; });
-                }
-                if (payload.notas) {
-                    notas = {};
-                    Object.entries(payload.notas).forEach(([k, v]) => { notas[parseInt(k)] = v; });
-                }
+                if (payload.cart) { cart = {}; Object.entries(payload.cart).forEach(([k,v]) => { cart[parseInt(k)] = v; }); }
+                if (payload.notas) { notas = {}; Object.entries(payload.notas).forEach(([k,v]) => { notas[parseInt(k)] = v; }); }
                 Toast.fire({ icon: 'success', title: '¡Presupuesto cargado!' });
                 window.history.replaceState({}, document.title, window.location.pathname);
-            } catch (e) {
-                console.warn('Error al cargar carrito desde URL:', e);
-            }
+            } catch(e) { console.warn('Error al cargar carrito desde URL:', e); }
         }
 
         function mostrarShareToast() {
@@ -2011,30 +1882,7 @@
             setTimeout(() => toast.classList.remove('show'), 2800);
         }
 
-        // ── POPUP DESCUENTO APP ───────────────────────────────────────────────
-        function mostrarDescuento() {
-            const visto = localStorage.getItem('uru_descuento_visto');
-            const hoy   = new Date().toDateString();
-            if (visto === hoy) {
-                if (!window._promoMostrada) { mostrarPopupSiCorresponde(); window._promoMostrada = true; }
-                return;
-            }
-            setTimeout(() => {
-                document.getElementById('descuento-overlay').classList.add('visible');
-            }, 2500);
-        }
-
-        function cerrarDescuento() {
-            localStorage.setItem('uru_descuento_visto', new Date().toDateString());
-            document.getElementById('descuento-overlay').classList.remove('visible');
-            if (!window._promoMostrada) { mostrarPopupSiCorresponde(); window._promoMostrada = true; }
-        }
-
-        function cerrarDescuentoSiClick(e) {
-            if (e.target === document.getElementById('descuento-overlay')) cerrarDescuento();
-        }
-
-        // ── CARRUSEL NOVEDADES Y OFERTAS ─────────────────────────────────────
+        // ── CARRUSEL ──────────────────────────────────────────────────────────
         let carruselTab = 'nuevos';
 
         function renderCarrusel() {
@@ -2089,14 +1937,12 @@
             if (btn) { btn.classList.add('car-agregado'); btn.innerHTML = '<i class="fas fa-check mr-1"></i> ¡Listo!'; btn.disabled = true; }
         }
 
-        // ── POPUP NOVEDADES Y OFERTAS ─────────────────────────────────────────
+        // ── POPUP NOVEDADES/OFERTAS ───────────────────────────────────────────
         function mostrarPopupSiCorresponde() {
             const nuevos  = data.filter(p => p.stock > 0 && p.esNuevo);
             const ofertas = data.filter(p => p.stock > 0 && p.esOferta);
             const todos   = [...nuevos, ...ofertas].slice(0, 6);
             if (todos.length === 0) return;
-
-            // Ajustar header según contenido
             const tieneNuevos  = nuevos.length > 0;
             const tieneOfertas = ofertas.length > 0;
             if (tieneNuevos && tieneOfertas) {
@@ -2112,11 +1958,8 @@
                 document.getElementById('promo-titulo').textContent    = '¡Mirá las novedades!';
                 document.getElementById('promo-desc').textContent      = 'Productos nuevos en el catálogo';
             }
-
             renderPromo(todos);
-            setTimeout(() => {
-                document.getElementById('promo-overlay').classList.add('visible');
-            }, 2500);
+            setTimeout(() => { document.getElementById('promo-overlay').classList.add('visible'); }, 2500);
         }
 
         function renderPromo(productos) {
@@ -2151,20 +1994,13 @@
             const icon = document.getElementById(`promo-icon-${id}`);
             if (btn && icon) { btn.classList.add('agregado'); icon.className = 'fas fa-check'; btn.disabled = true; }
         }
-
-        function cerrarPromo() {
-            document.getElementById('promo-overlay').classList.remove('visible');
-        }
-
-        function cerrarPromoSiClick(e) {
-            if (e.target === document.getElementById('promo-overlay')) cerrarPromo();
-        }
+        function cerrarPromo() { document.getElementById('promo-overlay').classList.remove('visible'); }
+        function cerrarPromoSiClick(e) { if (e.target === document.getElementById('promo-overlay')) cerrarPromo(); }
 
         // ── RENDER CATEGORÍAS ─────────────────────────────────────────────────
         function renderCats() {
             const uniqueCats = [...new Set(data.map(p => p.cat))];
             const cats = ['TODOS', ...uniqueCats];
-
             document.getElementById('category-filters').innerHTML = cats.map(c => {
                 const count = c === 'TODOS' ? data.length : data.filter(p => p.cat === c).length;
                 return `
@@ -2179,8 +2015,7 @@
         }
 
         function abrirLightbox(id) {
-            const p = data[id];
-            if (!p) return;
+            const p = data[id]; if (!p) return;
             document.getElementById('lightbox-img').src            = p.img;
             document.getElementById('lightbox-nombre').textContent = p.nom;
             document.getElementById('lightbox-precio').textContent = p.stock > 0 ? '$' + p.pre.toLocaleString() : 'Sin stock';
@@ -2189,7 +2024,6 @@
             requestAnimationFrame(() => lb.style.opacity = '1');
             document.body.style.overflow = 'hidden';
         }
-
         function cerrarLightbox() {
             const lb = document.getElementById('lightbox-overlay');
             lb.style.opacity = '0';
@@ -2197,15 +2031,13 @@
             document.body.style.overflow = '';
         }
 
-        // RENDER CATÁLOGO
+        // ── RENDER CATÁLOGO ───────────────────────────────────────────────────
         function render() {
             const q = document.getElementById('search').value.toLowerCase().trim();
             const terminos = q
                 ? q.split(/\s+[oo]\s+/i).map(t => t.trim()).filter(Boolean)
                 : [];
 
-            // Si la búsqueda matchea productos, detectar si hay una categoría dominante
-            // y expandir para mostrar toda esa categoría + los matches directos
             let categoriasExpandir = new Set();
             if (terminos.length > 0 && terminos[0].length >= 3) {
                 const qNorm = normStr(q);
@@ -2216,7 +2048,6 @@
                     .slice(0, 5);
                 if (matchesDirectos.length > 0) {
                     const topPts = matchesDirectos[0].pts;
-                    // Si los top matches comparten categoría → expandir esa categoría
                     const catTop = matchesDirectos[0].p.cat;
                     const todosEnCat = matchesDirectos.filter(x => x.pts >= topPts * 0.5 && x.p.cat === catTop).length;
                     if (todosEnCat >= 1) categoriasExpandir.add(catTop);
@@ -2227,9 +2058,7 @@
                 if (activeCat !== 'TODOS' && p.cat !== activeCat) return false;
                 if (soloConStock && p.stock <= 0) return false;
                 if (terminos.length === 0) return true;
-                // Match directo por nombre
                 if (terminos.some(t => p.nom.toLowerCase().includes(t))) return true;
-                // Match por categoría expandida
                 if (categoriasExpandir.has(p.cat)) return true;
                 return false;
             });
@@ -2262,7 +2091,6 @@
                             <i class="fas fa-heart"></i>
                         </button>
 
-                        <!-- Imagen clickeable → lightbox -->
                         <div class="img-container h-32 mb-3 flex items-center justify-center p-3 cursor-pointer active:scale-95 transition-transform relative"
                              onclick="abrirLightbox(${p.id})">
                             <div class="img-loader skeleton" id="loader-${p.id}"></div>
@@ -2316,37 +2144,26 @@
         window.add = (id, n) => {
             const p       = data[id];
             const current = cart[id] || 0;
-
             if (n > 0 && current >= p.stock) {
                 Swal.fire({ title: 'Stock Limitado', text: 'No hay más unidades disponibles.', icon: 'warning', confirmButtonColor: '#ff6b00' });
                 return;
             }
-
             cart[id] = Math.max(0, current + n);
-
-            if (cart[id] === 0) {
-                delete cart[id];
-                delete notas[id];
-            } else if (n > 0) {
-                Toast.fire({ icon: 'success', title: `Agregado: ${p.nom}` });
-                if (cart[id] === 1 && p.sugerido) verificarSugerencia(p.sugerido);
-            }
-
+            if (cart[id] === 0) { delete cart[id]; delete notas[id]; }
+            else if (n > 0) { Toast.fire({ icon: 'success', title: `Agregado: ${p.nom}` }); if (cart[id] === 1 && p.sugerido) verificarSugerencia(p.sugerido); }
             guardarCarrito();
             update(); render();
         };
 
-        // ── NOTAS ─────────────────────────────────────────────────────────────
         function guardarNota(id, valor) {
-            if (valor.trim()) {
-                notas[id] = valor.trim();
-            } else {
-                delete notas[id];
-            }
+            if (valor.trim()) notas[id] = valor.trim(); else delete notas[id];
             guardarCarrito();
         }
 
-        // ── UPDATE CARRITO ────────────────────────────────────────────────────
+        // ════════════════════════════════════════════════════════
+        // UPDATE — calcula totales con descuento si promoActiva
+        // FIX: muestra subtotal + descuento + total final por separado
+        // ════════════════════════════════════════════════════════
         function update() {
             let totalMonto = 0;
             let totalItems = 0;
@@ -2409,30 +2226,29 @@
                 </div>
             `;
 
+            // Subtotal siempre visible
             document.getElementById('total').innerText = totalMonto.toLocaleString();
             document.getElementById('count').innerText = totalItems;
 
-            // ── Descuento promocional ──────────────────────────────────────────
-            const filaDesc      = document.getElementById('fila-descuento');
-            const filaTotFinal  = document.getElementById('fila-total-final');
-            let totalConDescuento = totalMonto;
+            // ── Descuento promocional ─────────────────────────────────────────
+            // FIX: solo mostrar si promoActiva === true Y hay items en el carrito
+            const filaDesc     = document.getElementById('fila-descuento');
+            const filaTotFinal = document.getElementById('fila-total-final');
+
             if (promoActiva && totalMonto > 0) {
-                const montoDesc = Math.round(totalMonto * promoPorcentaje / 100);
-                totalConDescuento = totalMonto - montoDesc;
-                if (filaDesc) {
-                    document.getElementById('descuento-porc-label').textContent = promoPorcentaje;
-                    document.getElementById('descuento-monto').textContent = montoDesc.toLocaleString();
-                    filaDesc.style.display = 'flex';
-                }
-                if (filaTotFinal) {
-                    document.getElementById('total-final').textContent = totalConDescuento.toLocaleString();
-                    filaTotFinal.style.display = 'flex';
-                }
+                const montoDesc       = Math.round(totalMonto * promoPorcentaje / 100);
+                const totalConDescuento = totalMonto - montoDesc;
+                document.getElementById('descuento-porc-label').textContent = promoPorcentaje;
+                document.getElementById('descuento-monto').textContent      = montoDesc.toLocaleString();
+                document.getElementById('total-final').textContent          = totalConDescuento.toLocaleString();
+                if (filaDesc)     filaDesc.style.display     = 'flex';
+                if (filaTotFinal) filaTotFinal.style.display = 'flex';
             } else {
                 if (filaDesc)     filaDesc.style.display     = 'none';
                 if (filaTotFinal) filaTotFinal.style.display = 'none';
             }
 
+            // ── Barra mínimo ─────────────────────────────────────────────────
             const perc = Math.min(100, (totalMonto / MIN_COMPRA) * 100);
             const fill = document.getElementById('min-purchase-fill');
             if (fill) fill.style.width = perc + '%';
@@ -2448,98 +2264,54 @@
                 if (minTxt) minTxt.innerHTML = `<span class="text-green-500">✅ PEDIDO MÍNIMO ALCANZADO</span>`;
             }
 
-            // Barra global mínimo
             const bg = document.getElementById('barra-minimo-global');
             if (bg) {
                 bg.style.display = totalItems > 0 ? 'block' : 'none';
                 const bf = document.getElementById('barra-min-fill');
                 const bl = document.getElementById('barra-min-label');
-                if (bf) bf.style.width = Math.min(100, (totalMonto/MIN_COMPRA)*100) + '%';
-                if (bf) bf.style.background = totalMonto >= MIN_COMPRA ? '#16a34a' : '#ff6b00';
+                if (bf) { bf.style.width = Math.min(100, (totalMonto/MIN_COMPRA)*100) + '%'; bf.style.background = totalMonto >= MIN_COMPRA ? '#16a34a' : '#ff6b00'; }
                 if (bl) bl.textContent = totalMonto >= MIN_COMPRA ? '✅ Mínimo OK' : `$${(MIN_COMPRA-totalMonto).toLocaleString()} para el mínimo`;
             }
         }
 
         // ── FAVORITOS ─────────────────────────────────────────────────────────
         function toggleFav(id) {
-            if (favoritos.includes(id)) {
-                favoritos = favoritos.filter(f => f !== id);
-            } else {
-                favoritos.push(id);
-            }
+            if (favoritos.includes(id)) favoritos = favoritos.filter(f => f !== id);
+            else favoritos.push(id);
             localStorage.setItem('uru_favs', JSON.stringify(favoritos));
             render();
         }
-
         function verFavoritos() {
             soloFavs = !soloFavs;
             document.getElementById('btn-favs').classList.toggle('text-red-500', soloFavs);
             render();
         }
-
         function vaciarCarrito() {
             Swal.fire({
-                title: '¿Vaciar carrito?',
-                text: 'Se borra el pedido actual y empezás de cero.',
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonText: 'Sí, vaciar',
-                cancelButtonText: 'Cancelar',
-                confirmButtonColor: '#ef4444',
-                cancelButtonColor: '#ff6b00'
+                title: '¿Vaciar carrito?', text: 'Se borra el pedido actual y empezás de cero.',
+                icon: 'warning', showCancelButton: true,
+                confirmButtonText: 'Sí, vaciar', cancelButtonText: 'Cancelar',
+                confirmButtonColor: '#ef4444', cancelButtonColor: '#ff6b00'
             }).then(r => { if (r.isConfirmed) nuevaOrden(); });
         }
-
-        // ── SUGERENCIA ────────────────────────────────────────────────────────
         function verificarSugerencia(nombreSugerido) {
             const sug = data.find(p => p.nom === nombreSugerido);
             if (sug && sug.stock > 0 && !cart[sug.id]) {
                 Swal.fire({
-                    title: '¡No te olvides!',
-                    text: `¿Querés sumar ${nombreSugerido} a tu pedido?`,
-                    imageUrl: sug.img, imageHeight: 100,
-                    showCancelButton: true,
-                    confirmButtonText: '¡Sí, sumar!', cancelButtonText: 'No, gracias',
-                    confirmButtonColor: '#ff6b00'
+                    title: '¡No te olvides!', text: `¿Querés sumar ${nombreSugerido} a tu pedido?`,
+                    imageUrl: sug.img, imageHeight: 100, showCancelButton: true,
+                    confirmButtonText: '¡Sí, sumar!', cancelButtonText: 'No, gracias', confirmButtonColor: '#ff6b00'
                 }).then(result => { if (result.isConfirmed) add(sug.id, 1); });
-            }
-        }
-
-        // ── VERIFICAR PROMOCIÓN DESDE APPS SCRIPT ────────────────────────────
-        async function verificarPromo() {
-            try {
-                const url  = `${APPS_SCRIPT_URL}?action=promo&token=${encodeURIComponent(SECRET_TOKEN)}`;
-                const res  = await fetch(url);
-                const json = await res.json();
-                if (json.ok && json.activa) {
-                    promoActiva     = true;
-                    promoPorcentaje = json.porcentaje || 3;
-                    // Mostrar banner
-                    const banner = document.getElementById('banner-promo');
-                    if (banner) {
-                        document.getElementById('banner-promo-porc').textContent = promoPorcentaje;
-                        banner.style.display = 'block';
-                    }
-                    update();
-                } else {
-                    promoActiva = false;
-                    const banner = document.getElementById('banner-promo');
-                    if (banner) banner.style.display = 'none';
-                    update();
-                }
-            } catch(e) {
-                console.warn('[Promo]', e.message);
             }
         }
 
         // ── HORARIO ───────────────────────────────────────────────────────────
         function verificarHorarioCierre() {
-            const ahora        = new Date();
-            const totalMin     = ahora.getHours() * 60 + ahora.getMinutes();
-            const cierreMin    = 11 * 60 + 30;
-            const btnW         = document.getElementById('btn-whatsapp');
-            const textoCierre  = document.getElementById('cierre-texto');
-
+            const ahora       = new Date();
+            const totalMin    = ahora.getHours() * 60 + ahora.getMinutes();
+            const cierreMin   = 11 * 60 + 30;
+            const btnW        = document.getElementById('btn-whatsapp');
+            const textoCierre = document.getElementById('cierre-texto');
             if (totalMin >= cierreMin) {
                 if (textoCierre) textoCierre.innerHTML = '⚠️ Cierre alcanzado — tu pedido se entregará <strong>MAÑANA</strong>';
                 if (btnW) btnW.dataset.entrega = 'MAÑANA';
@@ -2549,10 +2321,14 @@
             }
         }
 
-        // snapshot del último envío al sheet — para calcular diferencia en reenvíos
         let cartEnviado = {};
 
-        // ── ENVIAR PEDIDO ─────────────────────────────────────────────────────
+        // ════════════════════════════════════════════════════════
+        // ENVIAR PEDIDO
+        // FIX CLAVE: siempre envía el total BRUTO al Apps Script.
+        // El Apps Script es el único que aplica y registra el descuento.
+        // Así se evita el doble descuento que había antes.
+        // ════════════════════════════════════════════════════════
         async function enviarPedido() {
             const nombre    = document.getElementById('user-name').value.trim();
             const direccion = document.getElementById('user-address').value.trim();
@@ -2567,10 +2343,11 @@
                 if (ids[idx] !== undefined) guardarNota(ids[idx], ta.value);
             });
 
-            // ── Solo enviar al sheet la DIFERENCIA respecto al último envío ──
+            // FIX: siempre el bruto — el backend aplica el descuento
+            const totalBruto = parseInt((document.getElementById('total').innerText || '0').replace(/\./g,'').replace(',','.')) || 0;
+
             const esReenvio = Object.keys(cartEnviado).length > 0;
             const itemsDiff = [];
-
             Object.entries(cart).forEach(([idStr, cantidad]) => {
                 const id        = parseInt(idStr);
                 const cantAntes = cartEnviado[id] || 0;
@@ -2579,57 +2356,24 @@
             });
 
             if (esReenvio) {
-                // Actualización: mandar carrito completo + flag para que el sheet actualice la fila
-                const itemsCompletos = Object.entries(cart).map(([idStr, cantidad]) => ({
-                    nombre: data[parseInt(idStr)].nom, cantidad
-                }));
-                // Descontar stock solo para los ítems nuevos/adicionales
-                itemsDiff.forEach(item => {
-                    const p = data.find(d => d.nom === item.nombre);
-                    if (p) p.stock = Math.max(0, p.stock - item.cantidad);
-                });
+                const itemsCompletos = Object.entries(cart).map(([idStr, cantidad]) => ({ nombre: data[parseInt(idStr)].nom, cantidad }));
+                itemsDiff.forEach(item => { const p = data.find(d => d.nom === item.nombre); if (p) p.stock = Math.max(0, p.stock - item.cantidad); });
                 fetch(APPS_SCRIPT_URL, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    headers: { 'Content-Type': 'text/plain' },
-                    body: JSON.stringify({
-                        token: SECRET_TOKEN,
-                        items: itemsCompletos,
-                        itemsDiff,
-                        esActualizacion: true,
-                        comercio: nombre,
-                        direccion,
-                        entrega,
-                        total: (() => { const base = parseInt((document.getElementById('total').innerText || '0').replace(/\./g, '').replace(',', '.')) || 0; return promoActiva ? Math.round(base * (1 - promoPorcentaje / 100)) : base; })()
-                    })
+                    method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' },
+                    body: JSON.stringify({ token: SECRET_TOKEN, items: itemsCompletos, itemsDiff, esActualizacion: true, comercio: nombre, direccion, entrega, total: totalBruto })
                 }).catch(err => console.warn('Error al registrar pedido:', err));
             } else if (itemsDiff.length > 0) {
-                // Primer envío normal
-                itemsDiff.forEach(item => {
-                    const p = data.find(d => d.nom === item.nombre);
-                    if (p) p.stock = Math.max(0, p.stock - item.cantidad);
-                });
+                itemsDiff.forEach(item => { const p = data.find(d => d.nom === item.nombre); if (p) p.stock = Math.max(0, p.stock - item.cantidad); });
                 fetch(APPS_SCRIPT_URL, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    headers: { 'Content-Type': 'text/plain' },
-                    body: JSON.stringify({
-                        token: SECRET_TOKEN,
-                        items: itemsDiff,
-                        comercio: nombre,
-                        direccion,
-                        entrega,
-                        total: (() => { const base = parseInt((document.getElementById('total').innerText || '0').replace(/\./g, '').replace(',', '.')) || 0; return promoActiva ? Math.round(base * (1 - promoPorcentaje / 100)) : base; })()
-                    })
+                    method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' },
+                    body: JSON.stringify({ token: SECRET_TOKEN, items: itemsDiff, comercio: nombre, direccion, entrega, total: totalBruto })
                 }).catch(err => console.warn('Error al registrar pedido:', err));
             }
 
-            // Guardar snapshot actual
             cartEnviado = { ...cart };
-
             confetti({ particleCount: 200, spread: 80, origin: { y: 0.6 } });
 
-            // ── WhatsApp: siempre el pedido COMPLETO ──────────────────────────
+            // ── Mensaje WhatsApp — incluye desglose de descuento si aplica ────
             let msg = esReenvio
                 ? `*📦 PEDIDO ACTUALIZADO — EL URU*%0A`
                 : `*NUEVO PEDIDO — EL URU*%0A`;
@@ -2654,41 +2398,34 @@
             }
 
             msg += `-------------------------------%0A`;
+            msg += `💰 *SUBTOTAL: $${totalBruto.toLocaleString()}*%0A`;
             if (promoActiva) {
-                const baseTotal  = parseInt((document.getElementById('total').innerText || '0').replace(/\./g, '')) || 0;
-                const montoDesc  = Math.round(baseTotal * promoPorcentaje / 100);
-                const totalFinal = baseTotal - montoDesc;
-                msg += `💰 *TOTAL: $${baseTotal.toLocaleString()}*%0A`;
+                const montoDesc  = Math.round(totalBruto * promoPorcentaje / 100);
+                const totalFinal = totalBruto - montoDesc;
                 msg += `🎉 *Descuento ${promoPorcentaje}%: -$${montoDesc.toLocaleString()}*%0A`;
-                msg += `✅ *TOTAL CON DESCUENTO: $${totalFinal.toLocaleString()}*`;
+                msg += `✅ *TOTAL FINAL: $${totalFinal.toLocaleString()}*`;
             } else {
-                msg += `💰 *TOTAL: $${document.getElementById('total').innerText}*`;
+                msg += `✅ *TOTAL: $${totalBruto.toLocaleString()}*`;
             }
 
-            // ── Carrito queda activo — NO se vacía ───────────────────────────
             guardarCarrito();
             update();
             document.getElementById('cart').style.display = 'none';
 
-            // Actualizar botón para indicar que es reenvío
             const btnW = document.getElementById('btn-whatsapp');
             if (btnW) { btnW.innerHTML = '📦 ACTUALIZAR PEDIDO'; btnW.style.background = 'linear-gradient(135deg,#2563eb,#1d4ed8)'; }
 
-            setTimeout(() => load(), 3000);
+            setTimeout(() => load(false), 3000);
             window.open(`https://wa.me/${WA_NUM}?text=${msg}`);
         }
 
-        // ── NUEVA ORDEN: limpia todo y resetea estado ─────────────────────────
         function nuevaOrden() {
-            cart        = {};
-            notas       = {};
-            cartEnviado = {};
+            cart = {}; notas = {}; cartEnviado = {};
             localStorage.removeItem('uru_cart');
             localStorage.removeItem('uru_notas');
             const btnW = document.getElementById('btn-whatsapp');
             if (btnW) { btnW.innerHTML = 'ENVIAR POR WHATSAPP'; btnW.style.background = ''; }
-            update();
-            render();
+            update(); render();
         }
 
         // ── LOGÍSTICA ─────────────────────────────────────────────────────────
@@ -2757,6 +2494,7 @@
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
     </script>
+
     <!-- LIGHTBOX imagen producto -->
     <div id="lightbox-overlay" onclick="cerrarLightbox()" style="display:none;opacity:0;transition:opacity 0.25s ease;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.92);backdrop-filter:blur(12px);align-items:center;justify-content:center;flex-direction:column;gap:16px;">
         <button onclick="cerrarLightbox()" style="position:absolute;top:20px;right:20px;width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:white;font-size:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;">×</button>

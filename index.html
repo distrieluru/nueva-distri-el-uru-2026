@@ -1855,7 +1855,7 @@
                 navigator.clipboard.writeText(linkCompartido).then(() => mostrarShareToast());
             }
             const nombre   = document.getElementById('user-name').value.trim();
-            const totalBruto = parseInt((document.getElementById('total').innerText || '0').replace(/\./g,'')) || 0;
+            const totalBruto = _totalBrutoActual;
             let msg = `*PRESUPUESTO — DISTRI EL URU*%0A`;
             if (nombre) msg += `👤 Comercio: ${nombre}%0A`;
             msg += `💰 Total estimado: $${totalBruto.toLocaleString()}%0A`;
@@ -2162,8 +2162,13 @@
 
         // ════════════════════════════════════════════════════════
         // UPDATE — calcula totales con descuento si promoActiva
-        // FIX: muestra subtotal + descuento + total final por separado
+        // FIX: _totalBrutoActual guarda el número limpio para que
+        // enviarPedido() lo use directo, sin parsear el DOM.
+        // Esto evita el bug de Android donde toLocaleString() usa
+        // comas como separador de miles → parseInt("102,556") = 102
         // ════════════════════════════════════════════════════════
+        let _totalBrutoActual = 0;
+
         function update() {
             let totalMonto = 0;
             let totalItems = 0;
@@ -2225,6 +2230,9 @@
                     <p class="font-black uppercase text-sm">Carrito vacío</p>
                 </div>
             `;
+
+            // Guardar como número limpio ANTES de toLocaleString (fix Android)
+            _totalBrutoActual = totalMonto;
 
             // Subtotal siempre visible
             document.getElementById('total').innerText = totalMonto.toLocaleString();
@@ -2343,8 +2351,9 @@
                 if (ids[idx] !== undefined) guardarNota(ids[idx], ta.value);
             });
 
-            // FIX: siempre el bruto — el backend aplica el descuento
-            const totalBruto = parseInt((document.getElementById('total').innerText || '0').replace(/\./g,'').replace(',','.')) || 0;
+            // FIX: usar la variable numérica directa, no parsear el DOM
+            // (evita bug en Android donde toLocaleString usa comas → parseInt falla)
+            const totalBruto = _totalBrutoActual;
 
             const esReenvio = Object.keys(cartEnviado).length > 0;
             const itemsDiff = [];

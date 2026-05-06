@@ -1132,20 +1132,18 @@
             }
         }
 
-        // ════════════════════════════════════════════════════════
-        // POPUP DESCUENTO
-        // ════════════════════════════════════════════════════════
+════
         function mostrarDescuento() {
             if (!promoActiva) {
                 if (!window._promoMostrada) { mostrarPopupSiCorresponde(); window._promoMostrada = true; }
                 return;
             }
-            const sessionKey = `uru_promo_vista_${promoPorcentaje}`;
-            if (sessionStorage.getItem(sessionKey)) {
+            // FIX: variable en memoria — sessionStorage bloqueado por Tracking Prevention en Edge/Firefox
+            if (window._descuentoVisto) {
                 if (!window._promoMostrada) { mostrarPopupSiCorresponde(); window._promoMostrada = true; }
                 return;
             }
-            sessionStorage.setItem(sessionKey, '1');
+            window._descuentoVisto = true;
             setTimeout(() => {
                 document.getElementById('descuento-overlay').classList.add('visible');
             }, 1800);
@@ -2297,7 +2295,7 @@
 
         let cartEnviado = {};
 
-        async function enviarPedido() {
+        function enviarPedido() {
             const nombre    = document.getElementById('user-name').value.trim();
             const direccion = document.getElementById('user-address').value.trim();
             const entrega   = document.getElementById('btn-whatsapp').dataset.entrega || 'HOY';
@@ -2360,41 +2358,14 @@
                 msg += `✅ *TOTAL: $${totalBruto.toLocaleString()}*`;
             }
 
-            document.getElementById('cart').style.display = 'none';
-            window.open(`https://wa.me/${WA_NUM}?text=${msg}`);
-
-            const result = await Swal.fire({
-                title: '📱 ¿Enviaste el mensaje?',
-                html: `
-                    <p style="color:var(--text-muted);font-size:13px;margin-bottom:14px;">
-                        Se abrió WhatsApp con tu pedido.<br>
-                        <strong>Presioná ENVIAR en WhatsApp</strong> y después confirmá acá.
-                    </p>
-                    <div style="background:rgba(22,163,74,0.1);border:1px solid rgba(22,163,74,0.3);border-radius:14px;padding:12px 16px;font-size:11px;color:#16a34a;font-weight:700;">
-                        💡 El pedido se registra en nuestro sistema solo cuando confirmás el envío
-                    </div>
-                `,
-                icon: 'question',
-                confirmButtonText: '✅ Sí, lo envié',
-                cancelButtonText: '↩️ Volver al carrito',
-                showCancelButton: true,
-                confirmButtonColor: '#16a34a',
-                cancelButtonColor: '#ff6b00',
-                allowOutsideClick: false,
-                allowEscapeKey: false,
-            });
-
-            if (!result.isConfirmed) {
-                document.getElementById('cart').style.display = 'flex';
-                return;
-            }
-
+            // ── Armar lista de items para el Sheet ───────────────────────────
             const itemsCompletos = Object.entries(cart).map(([idStr, cantidad]) => {
                 const p = data[parseInt(idStr)];
                 const precio = (p.pack_cantidad > 0 && cantidad >= p.pack_cantidad) ? p.pack_precio : p.pre;
                 return { nombre: p.nom, cantidad, precio };
             });
 
+            // ── Registrar en Sheet INMEDIATAMENTE (sin esperar confirmación) ──
             if (esReenvio) {
                 itemsDiff.forEach(item => { const p = data.find(d => d.nom === item.nombre); if (p) p.stock = Math.max(0, p.stock - item.cantidad); });
                 fetch(APPS_SCRIPT_URL, {
@@ -2408,6 +2379,10 @@
                     body: JSON.stringify({ token: SECRET_TOKEN, items: itemsCompletos, comercio: nombre, direccion, entrega, total: totalBruto })
                 }).catch(err => console.warn('Error al registrar pedido:', err));
             }
+
+            // ── Abrir WhatsApp y cerrar carrito ───────────────────────────────
+            document.getElementById('cart').style.display = 'none';
+            window.open(`https://wa.me/${WA_NUM}?text=${msg}`);
 
             cartEnviado = { ...cart };
             confetti({ particleCount: 200, spread: 80, origin: { y: 0.6 } });

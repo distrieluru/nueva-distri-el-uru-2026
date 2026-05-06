@@ -1120,6 +1120,16 @@
                         banner.style.display = 'block';
                     }
                     update();
+
+                    // FIX: mostrar popup de descuento AQUÍ, apenas confirmamos la promo
+                    // No esperar a load() — así evitamos la condición de carrera
+                    if (!window._descuentoVisto) {
+                        window._descuentoVisto = true;
+                        window._popupsMostrados = true; // bloquear el popup de novedades
+                        setTimeout(() => {
+                            document.getElementById('descuento-overlay').classList.add('visible');
+                        }, 1800);
+                    }
                 } else {
                     promoActiva = false;
                     const banner = document.getElementById('banner-promo');

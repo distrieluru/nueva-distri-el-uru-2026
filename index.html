@@ -837,6 +837,10 @@
                 </div>
             </div>
             <div class="flex items-center gap-2">
+                <button onclick="abrirComoComprar()" class="mode-toggle" title="¿Cómo comprar?">
+                    <i class="fas fa-bars"></i>
+                </button>
+
                 <button onclick="ciclarTema()" class="mode-toggle" id="theme-toggle" title="Cambiar tema">
                     <i id="theme-icon" class="fas fa-circle-half-stroke"></i>
                 </button>
@@ -2717,6 +2721,204 @@ async function verificarPromo() {
 
         function cerrarDescuentoSiClick(e) {
             if (e.target === document.getElementById('descuento-overlay')) cerrarDescuento();
+        }
+    </script>
+
+    <!-- ══════════════════════════════════════════
+         MODAL ¿CÓMO COMPRAR?
+    ══════════════════════════════════════════ -->
+    <div id="como-comprar-overlay"
+         onclick="cerrarComoComprarSiClick(event)"
+         style="display:none;opacity:0;transition:opacity 0.3s ease;position:fixed;inset:0;z-index:900;background:rgba(0,0,0,0.75);backdrop-filter:blur(10px);align-items:flex-end;justify-content:center;">
+
+        <div id="como-comprar-modal"
+             style="width:100%;max-width:640px;max-height:90vh;overflow-y:auto;
+                    background:var(--modal-bg);border-radius:32px 32px 0 0;
+                    padding:28px 20px 36px;
+                    transform:translateY(100%);
+                    transition:transform 0.35s cubic-bezier(0.32,0.72,0,1);
+                    position:relative;">
+
+            <!-- Handle + título -->
+            <div style="width:48px;height:5px;background:rgba(128,128,128,0.3);border-radius:999px;margin:0 auto 20px;"></div>
+            <button onclick="cerrarComoComprar()"
+                    style="position:absolute;top:20px;right:20px;width:36px;height:36px;border-radius:50%;
+                           background:rgba(128,128,128,0.15);border:none;color:var(--text-muted);
+                           font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer;">×</button>
+
+            <h2 style="font-size:22px;font-weight:900;text-transform:uppercase;letter-spacing:0.05em;
+                       text-align:center;margin-bottom:6px;color:var(--text-main);">
+                🛒 ¿Cómo comprar?
+            </h2>
+            <p style="text-align:center;font-size:11px;font-weight:700;text-transform:uppercase;
+                      letter-spacing:0.15em;color:#74ACDF;margin-bottom:24px;">
+                4 pasos simples
+            </p>
+
+            <!-- Steps -->
+            <div style="display:flex;flex-direction:column;gap:20px;">
+
+                <!-- PASO 1 -->
+                <div class="como-step">
+                    <div class="como-step-num">1</div>
+                    <div class="como-step-body">
+                        <div class="como-step-foto-wrap" onclick="abrirLightboxImagen(document.getElementById('cp-foto-1').src,'Paso 1: Buscá tu producto','')">
+                            <img id="cp-foto-1"
+                                 src="https://i.ibb.co/pB1kMb3c/Whats-App-Image-2026-05-14-at-16-43-32-1.jpg"
+                                 class="como-step-foto">
+                            <div class="como-step-zoom"><i class="fas fa-search-plus"></i></div>
+                        </div>
+                        <div class="como-step-info">
+                            <p class="como-step-title">Buscá tu producto</p>
+                            <p class="como-step-desc">Usá el buscador o navegá por categorías para encontrar lo que necesitás.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PASO 2 -->
+                <div class="como-step">
+                    <div class="como-step-num">2</div>
+                    <div class="como-step-body">
+                        <div class="como-step-foto-wrap" onclick="abrirLightboxImagen(document.getElementById('cp-foto-2').src,'Paso 2: Agregalo al carrito','')">
+                            <img id="cp-foto-2"
+                                 src="https://i.ibb.co/0pmCq9dx/Whats-App-Image-2026-05-14-at-16-43-32-2.jpg"
+                                 class="como-step-foto">
+                            <div class="como-step-zoom"><i class="fas fa-search-plus"></i></div>
+                        </div>
+                        <div class="como-step-info">
+                            <p class="como-step-title">Agregalo al carrito</p>
+                            <p class="como-step-desc">Elegí la cantidad y presioná <strong>+ Agregar</strong> en cada producto que querés pedir.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PASO 3 -->
+                <div class="como-step">
+                    <div class="como-step-num">3</div>
+                    <div class="como-step-body">
+                        <div class="como-step-foto-wrap" onclick="abrirLightboxImagen(document.getElementById('cp-foto-3').src,'Paso 3: Completá tus datos','')">
+                            <img id="cp-foto-3"
+                                 src="https://i.ibb.co/vvk7ZrVX/Whats-App-Image-2026-05-14-at-16-43-32.jpg"
+                                 class="como-step-foto">
+                            <div class="como-step-zoom"><i class="fas fa-search-plus"></i></div>
+                        </div>
+                        <div class="como-step-info">
+                            <p class="como-step-title">Completá tus datos</p>
+                            <p class="como-step-desc">En el carrito, ingresá tu <strong>nombre de comercio</strong> y tu <strong>dirección</strong> de entrega.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PASO 4 -->
+                <div class="como-step">
+                    <div class="como-step-num">4</div>
+                    <div class="como-step-body">
+                        <div class="como-step-foto-wrap" onclick="abrirLightboxImagen(document.getElementById('cp-foto-4').src,'Paso 4: Enviá el pedido','')">
+                            <img id="cp-foto-4"
+                                 src="https://i.ibb.co/RkQJfNBm/Whats-App-Image-2026-05-14-at-16-43-33.jpg"
+                                 class="como-step-foto">
+                            <div class="como-step-zoom"><i class="fas fa-search-plus"></i></div>
+                        </div>
+                        <div class="como-step-info">
+                            <p class="como-step-title">Enviá el pedido</p>
+                            <p class="como-step-desc">Presioná <strong>Enviar por WhatsApp</strong> y tu pedido llega directo a nosotros. ¡Listo!</p>
+                        </div>
+                    </div>
+                </div>
+
+            </div><!-- /steps -->
+
+            <!-- Footer -->
+            <div style="margin-top:28px;padding:16px;border-radius:20px;
+                        background:linear-gradient(135deg,#74ACDF22,#FFFFFF11);
+                        border:1px solid #74ACDF44;text-align:center;">
+                <p style="font-size:11px;font-weight:700;color:#74ACDF;text-transform:uppercase;letter-spacing:0.15em;margin-bottom:4px;">¿Dudas?</p>
+                <p style="font-size:12px;color:var(--text-muted);font-weight:600;">Escribinos por WhatsApp y te ayudamos 🤍</p>
+            </div>
+
+        </div><!-- /modal -->
+    </div><!-- /overlay -->
+
+    <style>
+        /* ── Como comprar – responsive ── */
+        .como-step { display:flex; align-items:flex-start; gap:14px; }
+        .como-step-num {
+            flex-shrink:0; width:34px; height:34px; border-radius:50%;
+            background:linear-gradient(135deg,#74ACDF,#4a7fbf);
+            color:white; font-weight:900; font-size:16px;
+            display:flex; align-items:center; justify-content:center;
+            margin-top:4px; box-shadow:0 4px 14px #74ACDF55;
+        }
+        .como-step-body { flex:1; display:flex; flex-direction:column; gap:10px; }
+        .como-step-foto-wrap {
+            position:relative; border-radius:18px; overflow:hidden;
+            cursor:zoom-in; border:1px solid var(--border-color); background:#000;
+        }
+        .como-step-foto {
+            width:100%; height:230px; object-fit:cover; object-position:top;
+            display:block; transition:transform 0.3s ease;
+        }
+        .como-step-foto-wrap:hover .como-step-foto,
+        .como-step-foto-wrap:active .como-step-foto { transform:scale(1.03); }
+        .como-step-zoom {
+            position:absolute; bottom:10px; right:10px;
+            background:rgba(0,0,0,0.6); color:white;
+            width:32px; height:32px; border-radius:50%;
+            display:flex; align-items:center; justify-content:center;
+            font-size:13px; pointer-events:none; backdrop-filter:blur(4px);
+        }
+        .como-step-info {}
+        .como-step-title {
+            font-size:15px; font-weight:900; color:var(--text-main);
+            text-transform:uppercase; letter-spacing:0.05em;
+        }
+        .como-step-desc {
+            font-size:12px; color:var(--text-muted); font-weight:600;
+            line-height:1.6; margin-top:3px;
+        }
+        /* Desktop: modal centrado + foto izq / texto der */
+        @media (min-width:640px) {
+            #como-comprar-overlay { align-items:center !important; }
+            #como-comprar-modal {
+                border-radius:32px !important;
+                max-height:90vh; width:92%; max-width:700px;
+                padding:36px 32px 44px !important;
+                transform:translateY(40px) scale(0.96) !important;
+            }
+            #como-comprar-modal.abierto { transform:translateY(0) scale(1) !important; }
+            .como-step-body { flex-direction:row; align-items:flex-start; gap:20px; }
+            .como-step-foto-wrap { flex-shrink:0; width:160px; }
+            .como-step-foto { height:280px; width:160px; object-position:top; }
+            .como-step-info { flex:1; padding-top:4px; }
+            .como-step-title { font-size:17px; }
+            .como-step-desc  { font-size:13px; }
+        }
+    </style>
+
+    <script>
+        function abrirComoComprar() {
+            const overlay = document.getElementById('como-comprar-overlay');
+            const modal   = document.getElementById('como-comprar-modal');
+            overlay.style.display = 'flex';
+            requestAnimationFrame(() => {
+                overlay.style.opacity = '1';
+                overlay.style.pointerEvents = 'auto';
+                modal.style.transform = 'translateY(0)';
+                modal.classList.add('abierto');
+            });
+        }
+        function cerrarComoComprar() {
+            const overlay = document.getElementById('como-comprar-overlay');
+            const modal   = document.getElementById('como-comprar-modal');
+            overlay.style.opacity = '0';
+            overlay.style.pointerEvents = 'none';
+            const isMobile = window.innerWidth < 640;
+            modal.style.transform = isMobile ? 'translateY(100%)' : 'translateY(40px) scale(0.96)';
+            modal.classList.remove('abierto');
+            setTimeout(() => { overlay.style.display = 'none'; }, 320);
+        }
+        function cerrarComoComprarSiClick(e) {
+            if (e.target === document.getElementById('como-comprar-overlay')) cerrarComoComprar();
         }
     </script>
 

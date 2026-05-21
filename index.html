@@ -175,6 +175,33 @@
             color: #74ACDF; display: flex; align-items: center; justify-content: center;
             font-size: 1.2rem; transition: 0.3s; cursor: pointer;
         }
+
+        /* ── v8 · Toggle Unidad/Bulto en cada card ── */
+        .toggle-mode-card {
+            display: grid; grid-template-columns: 1fr 1fr;
+            background: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 10px; padding: 3px; gap: 0;
+            margin-top: 6px;
+        }
+        .toggle-mode-card button {
+            appearance: none; border: 0; background: transparent; cursor: pointer;
+            padding: 6px 4px; font-size: 10px; font-weight: 900; color: var(--text-muted);
+            border-radius: 7px; display: flex; align-items: center; justify-content: center; gap: 4px;
+            text-transform: uppercase; letter-spacing: 0.04em;
+            transition: all 0.15s ease;
+        }
+        .toggle-mode-card button[aria-pressed="true"] {
+            background: #74ACDF; color: white;
+            box-shadow: 0 1px 0 rgba(0,0,0,0.06), 0 2px 8px -2px rgba(116,172,223,0.4);
+        }
+        .toggle-mode-card .pack-count-card {
+            font-size: 9px; padding: 1px 5px; border-radius: 4px;
+            background: rgba(0,0,0,0.12); font-weight: 900;
+        }
+        .toggle-mode-card button[aria-pressed="true"] .pack-count-card {
+            background: rgba(255,255,255,0.25); color: white;
+        }
         .qty-input {
             background: transparent; border: none; color: white;
             width: 40px; text-align: center; font-weight: 900;
@@ -720,7 +747,7 @@
             <div style="padding:16px;">
                 <div style="border-radius:20px;overflow:hidden;border:1px solid var(--border-color);cursor:zoom-in;"
                      onclick="abrirLightboxImagen(document.getElementById('oferta-img').src, document.getElementById('oferta-titulo').textContent, '')">
-                    <img id="oferta-img" src="" alt="Oferta especial"
+                    <img id="oferta-img" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" alt="Oferta especial"
                          style="width:100%;display:block;object-fit:cover;"
                          onerror="this.style.display='none'">
                 </div>
@@ -1165,6 +1192,25 @@
         let variantesSeleccionadas = new Set();
         let variantesBusqueda      = [];
 
+        // ═══════════════════════════════════════════════════════
+        // v8 · UNIDAD / BULTO
+        // ═══════════════════════════════════════════════════════
+        // cartModeState: UI-only — qué modalidad está activa en cada card
+        //                (no persiste; se reconstruye en cada render)
+        // El carrito real usa claves compuestas:
+        //   cart["12"]    → 5 unidades del producto id=12
+        //   cart["12_b"]  → 2 bultos del producto id=12
+        // Mismo producto puede aparecer en ambas modalidades como líneas separadas.
+        let cartModeState = {};
+
+        const isBultoKey   = (k) => String(k).endsWith('_b');
+        const baseId       = (k) => parseInt(String(k).replace('_b',''));
+        const makeBultoKey = (id) => id + '_b';
+        const tienePack    = (p) => p && p.pack_cantidad > 0 && p.pack_precio > 0;
+        const precioModo   = (p, esBulto) => esBulto ? p.pack_precio : p.pre;
+        const packModo     = (p, esBulto) => esBulto ? p.pack_cantidad : 1;
+        const maxQtyModo   = (p, esBulto) => esBulto ? Math.floor(p.stock / Math.max(1, p.pack_cantidad)) : p.stock;
+
         // ── DESCUENTO — se establece SOLO desde verificarPromo(), nunca asumido ──
         let promoActiva     = false;
         let promoPorcentaje = 3;
@@ -1219,8 +1265,9 @@
             try {
                 const c = localStorage.getItem('uru_cart');
                 const n = localStorage.getItem('uru_notas');
-                if (c) { const parsed = JSON.parse(c); Object.entries(parsed).forEach(([k,v]) => { cart[parseInt(k)] = v; }); }
-                if (n) { const parsed = JSON.parse(n);  Object.entries(parsed).forEach(([k,v]) => { notas[parseInt(k)] = v; }); }
+                // v8: las claves ahora son strings ("12", "12_b"), no enteros
+                if (c) { const parsed = JSON.parse(c); Object.entries(parsed).forEach(([k,v]) => { cart[k] = v; }); }
+                if (n) { const parsed = JSON.parse(n);  Object.entries(parsed).forEach(([k,v]) => { notas[k] = v; }); }
             } catch(e) { console.warn('Error restaurando carrito:', e); }
         }
 
@@ -2027,8 +2074,9 @@ async function verificarPromo() {
             if (!encoded) return;
             try {
                 const payload = JSON.parse(decodeURIComponent(encoded));
-                if (payload.cart) { cart = {}; Object.entries(payload.cart).forEach(([k,v]) => { cart[parseInt(k)] = v; }); }
-                if (payload.notas) { notas = {}; Object.entries(payload.notas).forEach(([k,v]) => { notas[parseInt(k)] = v; }); }
+                // v8: claves de string ("12", "12_b")
+                if (payload.cart) { cart = {}; Object.entries(payload.cart).forEach(([k,v]) => { cart[k] = v; }); }
+                if (payload.notas) { notas = {}; Object.entries(payload.notas).forEach(([k,v]) => { notas[k] = v; }); }
                 Toast.fire({ icon: 'success', title: '¡Presupuesto cargado!' });
                 window.history.replaceState({}, document.title, window.location.pathname);
             } catch(e) { console.warn('Error al cargar carrito desde URL:', e); }
@@ -2239,9 +2287,15 @@ async function verificarPromo() {
             if (soloFavs) filtered = filtered.filter(p => favoritos.includes(p.id));
 
             document.getElementById('catalogo').innerHTML = filtered.map(p => {
-                const qty       = cart[p.id] || 0;
+                // v8 · modo activo en esta card (solo UI)
+                const tienePackInfo = tienePack(p);
+                const mode = cartModeState[p.id] || 'unidad';
+                const esBulto = tienePackInfo && mode === 'bulto';
+                const cartKey = esBulto ? makeBultoKey(p.id) : String(p.id);
+                const qty       = cart[cartKey] || 0;
                 const agotado   = p.stock <= 0;
-                const tienePack = p.pack_cantidad > 0;
+                const precioActual = esBulto ? p.pack_precio : p.pre;
+                const maxQty = maxQtyModo(p, esBulto);
 
                 return `
                     <div class="card-prod p-3 rounded-[1.5rem] flex flex-col relative
@@ -2276,25 +2330,45 @@ async function verificarPromo() {
                         </div>
 
                         <h3 class="font-black uppercase leading-tight text-[var(--text-main)]" style="font-size:11px;min-height:2.8em;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;letter-spacing:0.01em;">${p.nom}</h3>
-                        <p class="price-tag mt-1 italic" style="font-size:1.3rem;">${agotado ? 'SIN STOCK' : '$' + p.pre.toLocaleString()}</p>
 
-                        ${tienePack && !agotado
+                        ${tienePackInfo && !agotado ? `
+                            <div class="toggle-mode-card" role="tablist">
+                                <button type="button" data-mode="unidad" aria-pressed="${!esBulto}"
+                                        onclick="cambiarModoCard(${p.id}, 'unidad')">
+                                    Unidad
+                                </button>
+                                <button type="button" data-mode="bulto"  aria-pressed="${esBulto}"
+                                        onclick="cambiarModoCard(${p.id}, 'bulto')">
+                                    Bulto <span class="pack-count-card">x${p.pack_cantidad}</span>
+                                </button>
+                            </div>
+                        ` : ''}
+
+                        <p class="price-tag mt-1 italic" style="font-size:1.3rem;">${agotado ? 'SIN STOCK' : '$' + precioActual.toLocaleString()}</p>
+
+                        ${tienePackInfo && esBulto && !agotado
                             ? `<p class="text-[8px] text-green-500 font-bold uppercase mt-0.5">
-                                   x${p.pack_cantidad}u → $${p.pack_precio.toLocaleString()}/u
+                                   $${Math.round(p.pack_precio / p.pack_cantidad).toLocaleString()}/u en bulto
                                </p>`
-                            : ''
+                            : tienePackInfo && !esBulto && !agotado
+                                ? `<p class="text-[8px] text-[var(--text-muted)] font-bold uppercase mt-0.5">
+                                       Bulto x${p.pack_cantidad}: $${p.pack_precio.toLocaleString()}
+                                   </p>`
+                                : ''
                         }
 
                         <div class="mt-2">
                             ${agotado
                                 ? `<button disabled class="w-full bg-gray-300 py-3 rounded-xl font-black text-[9px] text-gray-500 cursor-not-allowed">Agotado</button>`
                                 : qty === 0
-                                    ? `<button onclick="add(${p.id}, 1)" class="w-full bg-orange-600 py-3 rounded-xl font-black text-[9px] text-white hover:bg-orange-500 transition active:scale-95">Agregar</button>`
+                                    ? `<button onclick="add(${p.id}, 1, '${mode}')" class="w-full bg-orange-600 py-3 rounded-xl font-black text-[9px] text-white hover:bg-orange-500 transition active:scale-95">
+                                           Agregar${esBulto ? ' bulto' : ''}
+                                       </button>`
                                     : `<div class="flex items-center bg-orange-600 rounded-xl p-0.5 shadow-lg">
-                                           <button onclick="add(${p.id}, -1)" class="w-9 h-9 text-white text-xl font-black active:scale-90 transition">－</button>
-                                           <input type="number" value="${qty}" class="qty-input flex-1 text-sm"
-                                               onchange="setQty(${p.id}, this.value)" onclick="this.select()">
-                                           <button onclick="add(${p.id}, 1)" class="w-9 h-9 text-white text-xl font-black active:scale-90 transition">＋</button>
+                                           <button onclick="add(${p.id}, -1, '${mode}')" class="w-9 h-9 text-white text-xl font-black active:scale-90 transition">－</button>
+                                           <input type="number" value="${qty}" max="${maxQty}" class="qty-input flex-1 text-sm"
+                                               onchange="setQty(${p.id}, this.value, '${mode}')" onclick="this.select()">
+                                           <button onclick="add(${p.id}, 1, '${mode}')" class="w-9 h-9 text-white text-xl font-black active:scale-90 transition">＋</button>
                                        </div>`
                             }
                         </div>
@@ -2303,32 +2377,62 @@ async function verificarPromo() {
             }).join('');
         }
 
-        window.setQty = (id, val) => {
+        // v8 · cambiar modo desde el toggle en la card
+        window.cambiarModoCard = (id, mode) => {
+            cartModeState[id] = mode;
+            render();
+        };
+
+        window.setQty = (id, val, mode) => {
+            mode = mode || cartModeState[id] || 'unidad';
             const p = data[id];
-            let n   = parseInt(val) || 0;
-            if (n > p.stock) { n = p.stock; Swal.fire('Stock Máximo', `Solo hay ${p.stock} unidades.`, 'warning'); }
-            if (n <= 0) { delete cart[id]; delete notas[id]; }
-            else         { cart[id] = n; }
+            const esBulto = mode === 'bulto';
+            const cartKey = esBulto ? makeBultoKey(id) : String(id);
+            const max     = maxQtyModo(p, esBulto);
+            let n         = parseInt(val) || 0;
+            if (n > max) {
+                n = max;
+                Swal.fire('Stock máximo', esBulto
+                    ? `Solo hay ${max} bulto(s) disponibles (${p.stock}u ÷ ${p.pack_cantidad}).`
+                    : `Solo hay ${max} unidades.`, 'warning');
+            }
+            if (n <= 0) { delete cart[cartKey]; delete notas[cartKey]; }
+            else        { cart[cartKey] = n; }
             guardarCarrito();
             update(); render();
         };
 
-        window.add = (id, n) => {
+        window.add = (id, n, mode) => {
+            mode = mode || cartModeState[id] || 'unidad';
             const p       = data[id];
-            const current = cart[id] || 0;
-            if (n > 0 && current >= p.stock) {
-                Swal.fire({ title: 'Stock Limitado', text: 'No hay más unidades disponibles.', icon: 'warning', confirmButtonColor: '#74ACDF' });
+            const esBulto = mode === 'bulto';
+            const cartKey = esBulto ? makeBultoKey(id) : String(id);
+            const max     = maxQtyModo(p, esBulto);
+            const current = cart[cartKey] || 0;
+            if (n > 0 && current >= max) {
+                Swal.fire({
+                    title: 'Stock limitado',
+                    text: esBulto
+                        ? `No hay más bultos disponibles (máx ${max}).`
+                        : 'No hay más unidades disponibles.',
+                    icon: 'warning', confirmButtonColor: '#74ACDF'
+                });
                 return;
             }
-            cart[id] = Math.max(0, current + n);
-            if (cart[id] === 0) { delete cart[id]; delete notas[id]; }
-            else if (n > 0) { Toast.fire({ icon: 'success', title: `Agregado: ${p.nom}` }); if (cart[id] === 1 && p.sugerido) verificarSugerencia(p.sugerido); }
+            cart[cartKey] = Math.max(0, current + n);
+            if (cart[cartKey] === 0) { delete cart[cartKey]; delete notas[cartKey]; }
+            else if (n > 0) {
+                const label = esBulto ? `Bulto x${p.pack_cantidad} ${p.nom}` : p.nom;
+                Toast.fire({ icon: 'success', title: `Agregado: ${label}` });
+                if (cart[cartKey] === 1 && !esBulto && p.sugerido) verificarSugerencia(p.sugerido);
+            }
             guardarCarrito();
             update(); render();
         };
 
         function guardarNota(id, valor) {
-            if (valor.trim()) notas[id] = valor.trim(); else delete notas[id];
+            const key = String(id);
+            if (valor.trim()) notas[key] = valor.trim(); else delete notas[key];
             guardarCarrito();
         }
 
@@ -2339,23 +2443,28 @@ async function verificarPromo() {
             let totalItems = 0;
             let html       = '';
 
-            Object.entries(cart).forEach(([idStr, q]) => {
-                const id = parseInt(idStr);
-                const p  = data[id];
+            Object.entries(cart).forEach(([key, q]) => {
+                const id      = baseId(key);
+                const esBulto = isBultoKey(key);
+                const p       = data[id];
                 if (!p) return;
 
-                let precioAplicado = p.pre;
-                let tieneDescuento = false;
+                const precioUnit = esBulto ? p.pack_precio : p.pre;
+                const pack       = esBulto ? p.pack_cantidad : 1;
+                const subtotal   = precioUnit * q;
+                totalMonto += subtotal;
+                totalItems += q * pack;  // unidades reales en el carrito
 
-                if (p.pack_cantidad > 0 && q >= p.pack_cantidad) {
-                    precioAplicado = p.pack_precio;
-                    tieneDescuento = true;
-                }
-
-                const subtotal  = precioAplicado * q;
-                totalMonto     += subtotal;
-                totalItems     += q;
-                const notaActual = notas[id] || '';
+                const notaActual = notas[key] || '';
+                const labelMode = esBulto
+                    ? `<span class="text-[8px] bg-orange-600 text-white px-1.5 py-0.5 rounded ml-1 font-black uppercase">BULTO x${pack}</span>`
+                    : '';
+                const cantBadge = esBulto
+                    ? `<span class="text-xs font-black bg-orange-600 text-white px-2 py-0.5 rounded-md">${q} bulto${q>1?'s':''}</span>`
+                    : `<span class="text-xs font-black bg-orange-600 text-white px-2 py-0.5 rounded-md">x${q}</span>`;
+                const unidadesReales = esBulto
+                    ? `<p class="text-[9px] text-[var(--text-muted)] font-bold mt-0.5">= ${q * pack} unidades</p>`
+                    : '';
 
                 html += `
                     <div class="flex flex-col bg-[var(--input-bg)] p-3 rounded-2xl border border-[var(--border-color)]">
@@ -2365,15 +2474,15 @@ async function verificarPromo() {
                                      onerror="this.src='https://i.ibb.co/yB7ffL4T/unnamed.jpg'">
                             </div>
                             <div class="flex-1 min-w-0">
-                                <h4 class="font-bold text-[10px] uppercase truncate text-[var(--text-muted)]">${p.nom}</h4>
+                                <h4 class="font-bold text-[10px] uppercase truncate text-[var(--text-muted)]">${p.nom}${labelMode}</h4>
                                 <p class="text-orange-500 font-black text-base">
                                     $${subtotal.toLocaleString()}
-                                    ${tieneDescuento ? `<span class="text-[8px] bg-green-600 text-white px-1 rounded ml-1">PACK</span>` : ''}
                                 </p>
+                                ${unidadesReales}
                             </div>
                             <div class="flex flex-col items-end flex-shrink-0 gap-1">
-                                <span class="text-xs font-black bg-orange-600 text-white px-2 py-0.5 rounded-md">x${q}</span>
-                                <button onclick="add(${id}, -${q})" class="text-red-500 text-sm p-1 hover:text-red-400 transition">
+                                ${cantBadge}
+                                <button onclick="add(${id}, -${q}, '${esBulto ? 'bulto' : 'unidad'}')" class="text-red-500 text-sm p-1 hover:text-red-400 transition">
                                     <i class="fas fa-trash-alt"></i>
                                 </button>
                             </div>
@@ -2382,7 +2491,7 @@ async function verificarPromo() {
                             class="nota-textarea"
                             rows="1"
                             placeholder="Aclaración (ej: sin sal, cajón cerrado...)"
-                            onchange="guardarNota(${id}, this.value)"
+                            onchange="guardarNota('${key}', this.value)"
                             oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px'"
                         >${notaActual}</textarea>
                     </div>
@@ -2499,22 +2608,35 @@ async function verificarPromo() {
             }
 
             document.querySelectorAll('.nota-textarea').forEach((ta, idx) => {
-                const ids = Object.keys(cart).map(Number);
-                if (ids[idx] !== undefined) guardarNota(ids[idx], ta.value);
+                const keys = Object.keys(cart);
+                if (keys[idx] !== undefined) guardarNota(keys[idx], ta.value);
             });
 
             const totalBruto = _totalBrutoActual;
 
+            // v8 · helper: arma item para Apps Script desde una key de carrito
+            const itemDesdeKey = (key, cantidad) => {
+                const id      = baseId(key);
+                const esBulto = isBultoKey(key);
+                const p       = data[id];
+                if (!p) return null;
+                return {
+                    nombre:   p.nom,
+                    cantidad: cantidad,
+                    precio:   esBulto ? p.pack_precio : p.pre,
+                    mode:     esBulto ? 'bulto' : 'unidad',
+                    pack:     esBulto ? p.pack_cantidad : 1
+                };
+            };
+
             const esReenvio = Object.keys(cartEnviado).length > 0;
             const itemsDiff = [];
-            Object.entries(cart).forEach(([idStr, cantidad]) => {
-                const id        = parseInt(idStr);
-                const cantAntes = cartEnviado[id] || 0;
+            Object.entries(cart).forEach(([key, cantidad]) => {
+                const cantAntes = cartEnviado[key] || 0;
                 const cantNueva = cantidad - cantAntes;
                 if (cantNueva > 0) {
-                    const p = data[id];
-                    const precio = (p.pack_cantidad > 0 && cantidad >= p.pack_cantidad) ? p.pack_precio : p.pre;
-                    itemsDiff.push({ nombre: p.nom, cantidad: cantNueva, precio });
+                    const item = itemDesdeKey(key, cantNueva);
+                    if (item) itemsDiff.push(item);
                 }
             });
 
@@ -2526,19 +2648,27 @@ async function verificarPromo() {
             msg += `🕒 *Entrega:* ${entrega}%0A%0A`;
             msg += `-------------------------------%0A`;
 
-            Object.entries(cart).forEach(([idStr, q]) => {
-                const id = parseInt(idStr);
-                const p  = data[id];
-                let precio = p.pre;
-                if (p.pack_cantidad > 0 && q >= p.pack_cantidad) precio = p.pack_precio;
-                msg += `🔸 *${q}* x ${p.nom} ($${precio.toLocaleString()} c/u)`;
-                if (notas[id]) msg += `%0A   📝 _${notas[id]}_`;
+            Object.entries(cart).forEach(([key, q]) => {
+                const id      = baseId(key);
+                const esBulto = isBultoKey(key);
+                const p       = data[id];
+                if (!p) return;
+                const precio  = esBulto ? p.pack_precio : p.pre;
+                if (esBulto) {
+                    msg += `🔸 *${q}* x Bulto x${p.pack_cantidad} · ${p.nom} ($${precio.toLocaleString()} c/bulto)`;
+                } else {
+                    msg += `🔸 *${q}* x ${p.nom} ($${precio.toLocaleString()} c/u)`;
+                }
+                if (notas[key]) msg += `%0A   📝 _${notas[key]}_`;
                 msg += `%0A`;
             });
 
             if (esReenvio && itemsDiff.length > 0) {
                 msg += `%0A➕ *AGREGADO AHORA:*%0A`;
-                itemsDiff.forEach(i => { msg += `   • ${i.cantidad}x ${i.nombre}%0A`; });
+                itemsDiff.forEach(i => {
+                    const prefijo = i.mode === 'bulto' ? `Bulto x${i.pack} ` : '';
+                    msg += `   • ${i.cantidad}x ${prefijo}${i.nombre}%0A`;
+                });
             }
 
             msg += `-------------------------------%0A`;
@@ -2552,42 +2682,47 @@ async function verificarPromo() {
                 msg += `✅ *TOTAL: $${totalBruto.toLocaleString()}*`;
             }
 
-            // ── Armar lista de items para el Sheet ───────────────────────────
-            const itemsCompletos = Object.entries(cart).map(([idStr, cantidad]) => {
-                const p = data[parseInt(idStr)];
-                const precio = (p.pack_cantidad > 0 && cantidad >= p.pack_cantidad) ? p.pack_precio : p.pre;
-                return { nombre: p.nom, cantidad, precio };
-            });
+            // ── Items completos para el Sheet ───────────────────────────
+            const itemsCompletos = Object.entries(cart)
+                .map(([key, cantidad]) => itemDesdeKey(key, cantidad))
+                .filter(Boolean);
 
-            // ── Registrar en Sheet INMEDIATAMENTE (sin esperar confirmación) ──
+            // ── Helper: descontar stock localmente (unidades reales) ────
+            const descontarLocal = (item) => {
+                const p = data.find(d => d.nom === item.nombre);
+                if (!p) return;
+                const unidadesReales = item.cantidad * (item.pack || 1);
+                p.stock = Math.max(0, p.stock - unidadesReales);
+            };
+
+            // ── Registrar en Sheet INMEDIATAMENTE ───────────────────────
             if (esReenvio) {
-                itemsDiff.forEach(item => { const p = data.find(d => d.nom === item.nombre); if (p) p.stock = Math.max(0, p.stock - item.cantidad); });
+                itemsDiff.forEach(descontarLocal);
                 fetch(APPS_SCRIPT_URL, {
                     method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' },
                     body: JSON.stringify({ token: SECRET_TOKEN, items: itemsCompletos, itemsDiff, esActualizacion: true, comercio: nombre, direccion, entrega, total: totalBruto })
                 }).catch(err => console.warn('Error al registrar pedido:', err));
             } else {
-                itemsCompletos.forEach(item => { const p = data.find(d => d.nom === item.nombre); if (p) p.stock = Math.max(0, p.stock - item.cantidad); });
+                itemsCompletos.forEach(descontarLocal);
                 fetch(APPS_SCRIPT_URL, {
                     method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' },
                     body: JSON.stringify({ token: SECRET_TOKEN, items: itemsCompletos, comercio: nombre, direccion, entrega, total: totalBruto })
                 }).catch(err => console.warn('Error al registrar pedido:', err));
             }
 
-            // ── Abrir WhatsApp y cerrar carrito ───────────────────────────────
+            // ── Abrir WhatsApp y cerrar carrito ─────────────────────────
             document.getElementById('cart').style.display = 'none';
             window.open(`https://wa.me/${WA_NUM}?text=${msg}`);
 
             confetti({ particleCount: 200, spread: 80, origin: { y: 0.6 } });
 
-            // ── Limpiar carrito después del envío (sin guardar historial) ────
+            // ── Limpiar carrito tras el envío ───────────────────────────
             cart = {}; notas = {}; cartEnviado = {};
+            cartModeState = {};
             localStorage.removeItem('uru_cart');
             localStorage.removeItem('uru_notas');
-            // Nombre y dirección se conservan (saveUserData los guarda en uru_name / uru_address)
             update();
 
-            // ── Resetear botón de envío al estado original ────────────────────
             const btnW = document.getElementById('btn-whatsapp');
             if (btnW) { btnW.innerHTML = 'ENVIAR POR WHATSAPP'; btnW.style.background = ''; }
 
@@ -2596,6 +2731,7 @@ async function verificarPromo() {
 
         function nuevaOrden() {
             cart = {}; notas = {}; cartEnviado = {};
+            cartModeState = {};
             localStorage.removeItem('uru_cart');
             localStorage.removeItem('uru_notas');
             const btnW = document.getElementById('btn-whatsapp');
@@ -2626,23 +2762,33 @@ async function verificarPromo() {
                     <tbody>
             `;
 
-            items.forEach(([idStr, qty]) => {
-                const id   = parseInt(idStr);
-                const prod = data[id];
-                const notaProd = notas[id] ? `<div class="text-xs text-gray-400 mt-1">📝 ${notas[id]}</div>` : '';
+            items.forEach(([key, qty]) => {
+                const id      = baseId(key);
+                const esBulto = isBultoKey(key);
+                const prod    = data[id];
+                if (!prod) return;
+                const pack    = esBulto ? prod.pack_cantidad : 1;
+                const unidadesReales = qty * pack;
+                const notaProd = notas[key] ? `<div class="text-xs text-gray-400 mt-1">📝 ${notas[key]}</div>` : '';
+                const filaId   = `fila-log-${key.replace('_','-')}`;
+                const labelMode = esBulto
+                    ? `<span style="display:inline-block;background:#ff6b00;color:white;font-size:9px;font-weight:900;padding:2px 7px;border-radius:6px;margin-left:8px;text-transform:uppercase;">BULTO x${pack}</span>`
+                    : '';
+                const cantidadCell = esBulto
+                    ? `<span class="bg-orange-500/20 text-orange-500 px-4 py-2 rounded-lg font-black text-2xl">${qty}</span>
+                       <div class="text-[10px] text-gray-400 mt-1 font-bold">= ${unidadesReales}u</div>`
+                    : `<span class="bg-orange-500/20 text-orange-500 px-4 py-2 rounded-lg font-black text-2xl">${qty}</span>`;
 
                 tablaHTML += `
-                    <tr id="fila-log-${id}">
+                    <tr id="${filaId}">
                         <td class="font-bold border-l-4 border-orange-500 pl-4">
-                            <div class="text-white">${prod.nom}</div>${notaProd}
+                            <div class="text-white">${prod.nom}${labelMode}</div>${notaProd}
                         </td>
                         <td class="text-center text-xs text-gray-400">${prod.cat}</td>
-                        <td class="text-center">
-                            <span class="bg-orange-500/20 text-orange-500 px-4 py-2 rounded-lg font-black text-2xl">${qty}</span>
-                        </td>
+                        <td class="text-center">${cantidadCell}</td>
                         <td class="text-center no-print">
                             <input type="checkbox"
-                                   onchange="document.getElementById('fila-log-${id}').classList.toggle('fila-check')"
+                                   onchange="document.getElementById('${filaId}').classList.toggle('fila-check')"
                                    class="w-6 h-6 accent-orange-500">
                         </td>
                     </tr>
@@ -2925,7 +3071,7 @@ async function verificarPromo() {
     <!-- LIGHTBOX imagen producto -->
     <div id="lightbox-overlay" onclick="cerrarLightbox()" style="display:none;opacity:0;transition:opacity 0.25s ease;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.92);backdrop-filter:blur(12px);align-items:center;justify-content:center;flex-direction:column;gap:16px;">
         <button onclick="cerrarLightbox()" style="position:absolute;top:20px;right:20px;width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:white;font-size:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;">×</button>
-        <img id="lightbox-img" src="" style="max-width:90vw;max-height:75vh;object-fit:contain;border-radius:20px;box-shadow:0 30px 80px rgba(0,0,0,0.6);">
+        <img id="lightbox-img" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" style="max-width:90vw;max-height:75vh;object-fit:contain;border-radius:20px;box-shadow:0 30px 80px rgba(0,0,0,0.6);">
         <p id="lightbox-nombre" style="color:white;font-weight:900;font-size:14px;text-transform:uppercase;letter-spacing:0.1em;text-align:center;padding:0 20px;"></p>
         <p id="lightbox-precio" style="color:#74ACDF;font-weight:900;font-size:22px;"></p>
     </div>
